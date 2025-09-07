@@ -1,0 +1,37 @@
+
+
+/* Chat area */
+.chat {
+ max-width: 900px;               /* angenehme Zeilenbreite */
+  width: 100%;
+  margin: 0 auto;                 /* zentriert */
+  padding: 24px 16px;             /* Innenabstand */
+  gap: 16px;
+}
+
+.msg {
+  max-width: 80%;
+}
+
+/* User-Bubble – Blue, rechts */
+.msg.user {
+  align-self: flex-end;
+  background: #2d6cdf;           /* ChatGPT-ähnliches Blau */
+  color: #fff;
+  padding: 10px 14px;
+  border-radius: 18px;
+  max-width: 80%;
+}
+
+/* Assistant – nur Text, links */
+.msg.assistant {
+  align-self: flex-start;
+  color: #e5e7eb;
+  max-width: 75%;
+  /* optional leichtes Einrücken für Ruhe */
+  padding-left: 4px;
+  margin-block: 4px;
+}
+
+
+
