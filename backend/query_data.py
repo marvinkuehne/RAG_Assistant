@@ -4,12 +4,16 @@ from overrides.typing_utils import unknown
 from langchain_ollama import ChatOllama
 from Loader import  get_embedding
 
+BASE_DIR = os.path.dirname(__file__)                    # .../backend
+PERSIST_DIR = os.path.join(BASE_DIR, "db", "chroma")    # .../backend/db/chroma
+COLLECTION = "rag-chroma"
+
 def query_rag(query):
 
     # open database
     db = Chroma(
-        persist_directory="db/chroma", # use db already stored here
-        collection_name="rag-chroma", # give it same name
+        persist_directory=PERSIST_DIR, # use db already stored here
+        collection_name=COLLECTION, # give it same name
         embedding_function=get_embedding(), # give chroma embedding object so that it can in similiarity search apply it on the query
     )
 

@@ -16,6 +16,11 @@ from langchain_experimental.text_splitter import SemanticChunker
 from langchain_openai.embeddings import OpenAIEmbeddings
 from overrides.typing_utils import unknown
 
+
+import os
+print("CWD      :", os.getcwd())
+print("FILE DIR :", os.path.dirname(__file__))
+
 # load variables from .env
 load_dotenv()
 # get the key
@@ -25,7 +30,7 @@ openai_api_key = os.getenv("OPENAI_API_KEY")
 
 def load_documents():
     docs = []
-    folder_path = "/backend/data"
+    folder_path = os.path.join(os.path.dirname(__file__), "data")
 
     for current, foldernames, filenames in os.walk(folder_path):
         for filename in filenames:
@@ -48,7 +53,6 @@ def load_documents():
 
             pages = loader.load()
             docs.extend(pages)
-
     return docs
 
 
@@ -136,8 +140,8 @@ def add_to_chroma(embeddings, chunks, ids):
     print("chroma count:", vectorstore._collection.count())
     # print("IDS: ", vectorstore._collection.get())
 
-    return vectorstore
 
+    return vectorstore
 
 # Main
 if __name__ == "__main__":
@@ -146,3 +150,4 @@ if __name__ == "__main__":
     embeddings = get_embedding()
     ids = create_ids(chunks)
     vectorstore = add_to_chroma(embeddings, chunks, ids)
+
