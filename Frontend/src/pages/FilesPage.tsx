@@ -51,6 +51,8 @@ export default function FilesPage() {
             })
     }
 
+
+
     useEffect(() => {
         refreshServerFiles();
     }, []);
@@ -435,6 +437,40 @@ function ServerFileList({
     function toValue(label: string): string {
         return label.trim().toLowerCase().replace(/\s+/g, '-');
     }
+
+
+      // 🔹 NEU: Serverwerte in lokale States übernehmen
+  useEffect(() => {
+    const nextFileCategory: Record<string, Option | null> = {};
+    const foundOptions: Option[] = [];
+
+    for (const f of files) {
+      const label = f.category || null;
+      if (label) {
+        const opt: Option = { label, value: toValue(label), color: colorFromString(label) };
+        nextFileCategory[f.filename] = opt;
+
+        if (!foundOptions.some(o => o.value === opt.value)) {
+          foundOptions.push(opt);
+        }
+      } else {
+        nextFileCategory[f.filename] = null;
+      }
+    }
+
+    // 1) pro Datei die aktuelle Kategorie setzen
+    setFileCategory(nextFileCategory);
+
+    // 2) globale Options-Liste um neue Kategorien ergänzen (keine Duplikate)
+    setSelectCategory(prev => {
+      const merged = [...prev];
+      for (const o of foundOptions) {
+        if (!merged.some(m => m.value === o.value)) merged.push(o);
+      }
+      return merged;
+    });
+  }, [files]); // <-- wenn neue /files kommen, hydrieren
+
 
     const upsertGlobalOption = (opt: Option) =>
         setSelectCategory(prev =>

@@ -11,7 +11,7 @@ type ChatMessage = { role: "user" | "assistant"; content: string; sources?: stri
 export default function AskPage() {
 
     const [input, setInput] = useState("");
-    const [source, setSource] = useState<string[]>([]); //initialize string array that is empty
+    // const [source, setSource] = useState<string[]>([]); //initialize string array that is empty
     const [isLoading, setIsLoading] = useState(false); // showing true/false of handleclick
     const [progress, setProgress] = useState(0); //showing % of progess bar
     const [messages, setMessages] = useState<ChatMessage[]>([]);
@@ -71,9 +71,10 @@ export default function AskPage() {
         setIsLoading(true); // start loading bar
 
         //Ask backend
-        const categoriesResponse = await api.get("http://localhost:8000/get_category")
-        const categories = categoriesResponse.data.categories // Extract only ["Mathe", "Deutsch", ...]
-        const response = await api.post("http://localhost:8000/ask", {query: input, categories:categories}); // 4) Ask backend (await = as program should wait for further execution until after backend answered)
+        const response = await api.post("http://localhost:8000/ask", {
+            query: input,
+            categories: selectedCategories.map(c => c.label)
+        }); // 4) Ask backend (await = as program should wait for further execution until after backend answered)
         console.log(response.data);
 
         const assistantMsg: ChatMessage = {role: "assistant", content: response.data[0], sources: response.data[1]}; // 5) Append assistant reply to messages
@@ -81,6 +82,44 @@ export default function AskPage() {
 
         setIsLoading(false); // end loading bar
     }
+
+
+    const selectStyles = {
+        control: (base: any) => ({
+            ...base,
+            backgroundColor: "#1f2937",      // bg-gray-800/700
+            borderColor: "#374151",
+            color: "white",
+            minHeight: "40px",
+        }),
+        menu: (base: any) => ({
+            ...base,
+            backgroundColor: "#111827",      // bg-gray-900
+            color: "white",
+        }),
+        option: (base: any, state: any) => ({
+            ...base,
+            backgroundColor: state.isFocused ? "#374151" : "#111827",
+            color: "white",
+            cursor: "pointer",
+        }),
+        multiValue: (base: any) => ({
+            ...base,
+            backgroundColor: "#374151",
+        }),
+        multiValueLabel: (base: any) => ({
+            ...base,
+            color: "white",
+        }),
+        multiValueRemove: (base: any) => ({
+            ...base,
+            color: "white",
+            ":hover": {backgroundColor: "#4b5563", color: "white"},
+        }),
+        singleValue: (base: any) => ({...base, color: "white"}),
+        input: (base: any) => ({...base, color: "white"}),
+        placeholder: (base: any) => ({...base, color: "#9CA3AF"}),
+    };
 
     return (
         <div>
@@ -128,12 +167,22 @@ export default function AskPage() {
                     </div>
                 )}
             </div>
+            <div className="flex gap-2 mt-4">
 
-            <Select isMulti options={categories} onMenuOpen={async () => {
-                const categories = await api.get("http://localhost:8000/get_category")
-                const categories_transformed = categories.data.categories.map((c: string) => ({value: c, label: c})); //react-select doesnt understand ["mathe", "deutsch"] thus we transform categories
-                setCategories(categories_transformed)
-            }}/>
+                <Select
+                    isMulti
+                    options={categories}
+                    value={selectedCategories}
+                    onChange={(opts) => setSelectedCategories((opts ?? []) as CatOption[])} //
+                    onMenuOpen={async () => {
+                        const res = await api.get("http://localhost:8000/get_category");
+                        setCategories(res.data.categories.map((c: string) => ({value: c, label: c}))); //react-select doesnt understand ["mathe", "deutsch"] thus we transform categories
+
+                    }}
+                    styles={selectStyles}
+                />
+
+            </div>
 
 
         </div>

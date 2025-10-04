@@ -18,6 +18,12 @@ import os
 print("CWD      :", os.getcwd())
 print("FILE DIR :", os.path.dirname(__file__))
 
+#Define db path
+BASE_DIR = os.path.dirname(__file__)                 # …/backend
+PERSIST_DIR = os.path.join(BASE_DIR, "db", "chroma") # EIN gemeinsamer Pfad
+COLLECTION  = "rag-chroma"
+print("CHROMA DIR:", PERSIST_DIR)  # einmalig zum Prüfen
+
 # load variables from .env
 load_dotenv()
 # get the key
@@ -83,6 +89,7 @@ def create_ids(chunks):
     for chunk in chunks:
         filename = os.path.basename(chunk.metadata.get("source","unknown"))  # get last component of path (stored in chunk source)/ "unknown" fallback string as f expects string
         page = chunk.metadata.get("page", 0)
+        chunk.metadata["source"] = filename
 
         if filename != prev_filename:
             prev_filename = filename
@@ -99,8 +106,8 @@ def add_to_chroma(embeddings, chunks, ids):
     # open DB
     vectorstore = Chroma(  # from_documents = Add/Upsert!
         embedding_function=embeddings,
-        persist_directory="db/chroma",
-        collection_name="rag-chroma",
+        persist_directory=PERSIST_DIR,
+        collection_name=COLLECTION,
     )
 
     # check duplicates
@@ -136,8 +143,8 @@ def get_vectorstore():
     embeddings = OpenAIEmbeddings(openai_api_key=openai_api_key)
     vectorstore = Chroma(
         embedding_function=embeddings,
-        persist_directory="db/chroma",
-        collection_name="rag-chroma",
+        persist_directory=PERSIST_DIR,
+        collection_name=COLLECTION,
     )
     return vectorstore
 

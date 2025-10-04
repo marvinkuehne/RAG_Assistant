@@ -65,7 +65,7 @@ async def root():
 @app.post("/ask")
 async def askForm(
         question: Question):  # Fastapi gets question Json object from frontend and changes it into Question-Object (see above)
-    categories: question.categories
+    categories = question.categories
     query = question.query  # retrieve the attribute "query" of Question-Object
     print("👉 Query:", question.query)
     print("👉 Categories:", question.categories)
@@ -84,6 +84,8 @@ async def uploadFiles(file: UploadFile = File(...)):  # receive formdata object 
     return {"filename": file.filename, "size": len(content), "content_type": file.content_type}
 
 
+
+
 @app.post("/update_category")
 async def update_file_category(update: CategoryUpdate):
     vectorstore = get_vectorstore()
@@ -94,16 +96,23 @@ async def update_file_category(update: CategoryUpdate):
 @app.get("/get_category")
 async def get_category():
     vectorstore = get_vectorstore()
-    result = vectorstore.get(include=["metadatas"])  # gives also id etc.!!
+    result = vectorstore.get(include=["metadatas"])
+    metas = result.get("metadatas", []) # gives also id etc.!!
+
+    if metas and isinstance(metas[0], list):
+        metas = [m for sub in metas for m in sub]
 
     # Gather all categories from metadata
-    categories = []
+    cats = []
 
-    for meta in result["metadatas"]:  # filter metadatas from results
-        category = meta.get("category")
-        if (category != "uncategorized" and category != categories[category]):
-            categories.append(category)
-    return {"categories": categories}
+    for meta in metas:
+        if not meta:
+            continue
+        cat = meta.get("category")
+        if cat and cat != "Uncategorized" and cat not in cats:
+            cats.append(cat)
+
+    return {"categories": cats}
 
 #Categories for FileList Table category per file
 # @app.get("/file_categories")
@@ -141,20 +150,37 @@ async def processFiles(files: FileList):
     return {"processed_files": [f.filename for f in files.files]}
 
 
-# show client all saved files in UploadFolder on server
+
+# Helper @app.get("/files") : get stored category for each file in Chroma
+def _get_category_for_file(vs, filename: str) -> str | None:
+    res = vs.get(where={"source": filename}, include=["metadatas"])
+    metas = res.get("metadatas", [])
+    # Falls verschachtelt, flachziehen
+    if metas and isinstance(metas[0], list):
+        metas = [m for sub in metas for m in sub]
+    for meta in metas:
+        if meta and meta.get("category"):
+            return meta["category"]
+    return None
+
 @app.get("/files")
 async def showFiles():
-    metadataFiles = []
+    vs = get_vectorstore()
+    out = []
     for file in os.listdir(UploadFolder):
         full_path = os.path.join(UploadFolder, file)
         size = os.path.getsize(full_path)
         ctype = mimetypes.guess_type(full_path)[0] or "unknown"
-        metadataFiles.append({
+
+        cat = _get_category_for_file(vs, file) or "Uncategorized"
+
+        out.append({
             "filename": file,
             "size": size,
-            "content_type": ctype
+            "content_type": ctype,
+            "category": cat,
         })
-    return {"files": metadataFiles}
+    return {"files": out}
 
 
 @app.delete("/files/{filename}")

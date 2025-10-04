@@ -1,47 +1,46 @@
 import os
 from langchain_community.vectorstores import Chroma
 from langchain_ollama import ChatOllama
-from Loader import  get_embedding
+from Loader import get_embedding, PERSIST_DIR, COLLECTION
 
-BASE_DIR = os.path.dirname(__file__)                    # .../backend
-PERSIST_DIR = os.path.join(BASE_DIR, "db", "chroma")    # .../backend/db/chroma
-COLLECTION = "rag-chroma"
-
-def query_rag(query, categories: list[str] | None = None):
-
-    # open database
+def query_rag(query: str, categories: list[str] | None = None):
+    # 1) DB öffnen – gleicher Pfad wie Indexing
     db = Chroma(
-        persist_directory=PERSIST_DIR, # use db already stored here
-        collection_name=COLLECTION, # give it same name
-        embedding_function=get_embedding(), # give chroma embedding object so that it can in similiarity search apply it on the query
+        persist_directory=PERSIST_DIR,
+        collection_name=COLLECTION,
+        embedding_function=get_embedding(),
     )
 
-    # If categories available build filter
-    filter_dict = None
-    if categories:  # only if categories selected
-        filter_dict = {"category": {"$in": categories}}
+    # 2) Filter bauen + LOGGEN
+    filter_dict = {"category": {"$in": categories}} if categories else None
+    print("RAG DEBUG → FILTER_USED:", filter_dict)
 
-    # Retrieve top k chunks
-    results = db.similarity_search_with_score(query, k=3, filter=filter_dict)  # returns list: list[tuple[Document, float]] → (doc, score).
+    # 3) Suche + Treffer loggen
+    results = db.similarity_search_with_score(query, k=7, filter=filter_dict)
+    print("RAG DEBUG → NUM_RESULTS:", len(results))
 
-    # Collect Context + Sources
-    content_list = []
-    sources = []
-    for doc, score in results: # loop trough tuples (doc, score) of list
+    content_list: list[str] = []
+    sources: list[str] = []
+
+    for i, (doc, score) in enumerate(results, start=1):
         chunk_content = doc.page_content
         content_list.append(chunk_content)
+
         src = os.path.basename(doc.metadata.get("source", "unknown"))
         page = doc.metadata.get("page", 0)
+        cat = doc.metadata.get("category")  # <-- hier holen
+
         sources.append(f"{src}:p{page}")
+        print(f"RAG DEBUG [{i}] src={src} p={page} cat={cat} score={score:.4f}")
 
-    context = "\n\n---\n\n".join(content_list)  # translate content_list in string to pass it to LLM
+    context = "\n\n---\n\n".join(content_list)
 
-    # LLM
-    llm = ChatOllama(
-        model="llama3.2:latest",
-        # other params ...
+    # 4) LLM
+    llm = ChatOllama(model="llama3.2:latest")
+    prompt = (
+        f"Answer the question based on the following context:\n{context}\n\n"
+        f"Question: {query}\n\nAnswer:"
     )
-    prompt= f"Answer the question based on the following context:\n{context}\n\nQuestion: {query}\n\nAnswer:"
-    answer = llm.invoke(prompt).content # invoke provides message object from which we want to retrieve only the content
+    answer = llm.invoke(prompt).content
 
     return answer, sources
