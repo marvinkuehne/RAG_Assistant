@@ -1,4 +1,3 @@
-// import { StrictMode } from 'react'
 import { createRoot } from 'react-dom/client'
 // import 'bootstrap/dist/css/bootstrap.min.css';
 // import 'bootstrap/dist/js/bootstrap.bundle.min.js';
@@ -6,9 +5,8 @@ import {StrictMode} from 'react';
 import { createBrowserRouter, RouterProvider } from 'react-router-dom';
 import DashboardLayout from './components/DashboardLayout.tsx'
 import AskPage from "./pages/AskPage.tsx";
+import './index.css';
 import FilesPage from "./pages/FilesPage.tsx";
-import './index.css'
-
 
 //Render page once URL is accessed
 const router = createBrowserRouter([
@@ -33,4 +31,5 @@ createRoot(document.getElementById('root')!).render(
     <RouterProvider router = {router}></RouterProvider>
   </StrictMode>
 );
+
 

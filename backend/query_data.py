@@ -1,6 +1,5 @@
 import os
 from langchain_community.vectorstores import Chroma
-from overrides.typing_utils import unknown
 from langchain_ollama import ChatOllama
 from Loader import  get_embedding
 
@@ -8,7 +7,7 @@ BASE_DIR = os.path.dirname(__file__)                    # .../backend
 PERSIST_DIR = os.path.join(BASE_DIR, "db", "chroma")    # .../backend/db/chroma
 COLLECTION = "rag-chroma"
 
-def query_rag(query):
+def query_rag(query, categories: list[str] | None = None):
 
     # open database
     db = Chroma(
@@ -17,8 +16,13 @@ def query_rag(query):
         embedding_function=get_embedding(), # give chroma embedding object so that it can in similiarity search apply it on the query
     )
 
+    # If categories available build filter
+    filter_dict = None
+    if categories:  # only if categories selected
+        filter_dict = {"category": {"$in": categories}}
+
     # Retrieve top k chunks
-    results = db.similarity_search_with_score(query, k=3)  # returns list: list[tuple[Document, float]] → (doc, score).
+    results = db.similarity_search_with_score(query, k=3, filter=filter_dict)  # returns list: list[tuple[Document, float]] → (doc, score).
 
     # Collect Context + Sources
     content_list = []
@@ -41,10 +45,3 @@ def query_rag(query):
     answer = llm.invoke(prompt).content # invoke provides message object from which we want to retrieve only the content
 
     return answer, sources
-
-# Main
-query = "What did marvin work for in 2024?"
-
-answer, src = query_rag(query)
-print(answer)
-print(src)
