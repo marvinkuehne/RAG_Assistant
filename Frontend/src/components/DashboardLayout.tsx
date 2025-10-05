@@ -1,6 +1,6 @@
 import { ReactRouterAppProvider } from '@toolpad/core/react-router';
 import { DashboardLayout } from '@toolpad/core/DashboardLayout';
-import { Outlet } from 'react-router';
+import { Outlet } from 'react-router-dom';
 import type { Navigation } from '@toolpad/core/AppProvider';
 
 
