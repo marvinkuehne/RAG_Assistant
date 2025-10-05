@@ -5,11 +5,11 @@ import uvicorn
 import mimetypes
 from starlette.middleware.cors import CORSMiddleware
 
-from backend.Loader import load_documents, split_documents, get_embedding, create_ids, add_to_chroma
-from backend.services.chroma_service import update_category
+from Loader import load_documents, split_documents, get_embedding, create_ids, add_to_chroma
+from services.chroma_service import update_category
 from query_data import query_rag
 from pydantic import BaseModel
-from backend.Loader import get_vectorstore
+from Loader import get_vectorstore
 from typing import List, Optional
 
 # Upload folder for upload_files request
