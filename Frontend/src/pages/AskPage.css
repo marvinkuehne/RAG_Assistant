@@ -1,37 +1,13 @@
-
-
-/* Chat area */
-.chat {
- max-width: 900px;               /* angenehme Zeilenbreite */
-  width: 100%;
-  margin: 0 auto;                 /* zentriert */
-  padding: 24px 16px;             /* Innenabstand */
-  gap: 16px;
+/* Chat Markdown Basic Styling */
+.markdown p { margin: 0.25rem 0; }
+.markdown h1, .markdown h2, .markdown h3 { margin: .5rem 0 .25rem; font-weight: 700; }
+.markdown ul, .markdown ol { margin: .25rem 0 .25rem 1.25rem; }
+.markdown ul { list-style-type: disc; }
+.markdown ol { list-style-type: decimal; }
+.markdown li { margin: .125rem 0; }
+.markdown code {
+  background: #111827; /* gray-900 */
+  padding: 0 .25rem;
+  border-radius: .25rem;
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", monospace;
 }
-
-.msg {
-  max-width: 80%;
-}
-
-/* User-Bubble – Blue, rechts */
-.msg.user {
-  align-self: flex-end;
-  background: #2d6cdf;           /* ChatGPT-ähnliches Blau */
-  color: #fff;
-  padding: 10px 14px;
-  border-radius: 18px;
-  max-width: 80%;
-}
-
-/* Assistant – nur Text, links */
-.msg.assistant {
-  align-self: flex-start;
-  color: #e5e7eb;
-  max-width: 75%;
-  /* optional leichtes Einrücken für Ruhe */
-  padding-left: 4px;
-  margin-block: 4px;
-}
-
-
-
