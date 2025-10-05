@@ -1,7 +1,7 @@
 import {useState, useEffect, useRef} from "react";
 import api from '../api.ts';
 import './AskPage.css';
-import Select, {type StylesConfig, type MultiValue} from "react-select";
+import Select, {type StylesConfig} from "react-select";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 
@@ -60,7 +60,7 @@ export default function AskPage() {
 
 
     //Send via Enter key
-    const handleEnterKey = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const handleEnterKey = (e: React.KeyboardEvent<HTMLInputElement>) => {
         if (e.key == "Enter") {
             handleClick();
 
