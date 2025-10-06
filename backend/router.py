@@ -24,6 +24,7 @@ origins = [
     "http://localhost:5174",
     "http://localhost:5173",
     "http://localhost:8000",
+    "https://lambent-tapioca-db599c.netlify.app",
 ]
 
 # Block unauthorized requrests
@@ -84,8 +85,6 @@ async def uploadFiles(file: UploadFile = File(...)):  # receive formdata object 
     return {"filename": file.filename, "size": len(content), "content_type": file.content_type}
 
 
-
-
 @app.post("/update_category")
 async def update_file_category(update: CategoryUpdate):
     vectorstore = get_vectorstore()
@@ -97,7 +96,7 @@ async def update_file_category(update: CategoryUpdate):
 async def get_category():
     vectorstore = get_vectorstore()
     result = vectorstore.get(include=["metadatas"])
-    metas = result.get("metadatas", []) # gives also id etc.!!
+    metas = result.get("metadatas", [])  # gives also id etc.!!
 
     if metas and isinstance(metas[0], list):
         metas = [m for sub in metas for m in sub]
@@ -114,7 +113,8 @@ async def get_category():
 
     return {"categories": cats}
 
-#Categories for FileList Table category per file
+
+# Categories for FileList Table category per file
 # @app.get("/file_categories")
 # async def file_categories():
 #     vs = get_vectorstore()
@@ -150,7 +150,6 @@ async def processFiles(files: FileList):
     return {"processed_files": [f.filename for f in files.files]}
 
 
-
 # Helper @app.get("/files") : get stored category for each file in Chroma
 def _get_category_for_file(vs, filename: str) -> str | None:
     res = vs.get(where={"source": filename}, include=["metadatas"])
@@ -162,6 +161,7 @@ def _get_category_for_file(vs, filename: str) -> str | None:
         if meta and meta.get("category"):
             return meta["category"]
     return None
+
 
 @app.get("/files")
 async def showFiles():
