@@ -79,7 +79,7 @@ export default function AskPage() {
         setIsLoading(true); // start loading bar
 
         //Ask backend
-        const response = await api.post("http://localhost:8000/ask", {
+        const response = await api.post("/ask", {
             query: input,
             categories: selectedCategories.map(c => c.label)
         }); // 4) Ask backend (await = as program should wait for further execution until after backend answered)
@@ -332,7 +332,7 @@ export default function AskPage() {
                         value={selectedCategories}
                         onChange={(opts) => setSelectedCategories((opts ?? []) as CatOption[])}
                         onMenuOpen={async () => {
-                            const res = await api.get("http://localhost:8000/get_category");
+                            const res = await api.get("/get_category");
                             setCategories(res.data.categories.map((c: string) => ({value: c, label: c})));
                         }}
                         menuPlacement="top"

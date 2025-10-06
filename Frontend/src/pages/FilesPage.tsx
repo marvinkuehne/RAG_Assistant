@@ -1,6 +1,6 @@
 import {type ChangeEvent, useEffect, useRef, useState} from "react";
 import {FileAudio, FileIcon, FileImage, FileText, FileVideo, Plus, Trash2, Upload, X} from 'lucide-react';
-import axios from "axios";
+import api from "../api";
 import CreatableSelect from "react-select/creatable";
 import {components, type OptionProps, type StylesConfig} from "react-select";
 
@@ -46,11 +46,9 @@ export default function FilesPage() {
 
     //Refresh ServerFilelist
     async function refreshServerFiles() {
-        fetch("http://localhost:8000/files")
-            .then(res => res.json())
-            .then(json_data => {
-                setServerFiles(json_data.files); // save json
-            })
+       const { data } =  await api.get(`${import.meta.env.VITE_API_URL}/files`)
+                setServerFiles(data.files); // save json
+
     }
 
 
@@ -97,8 +95,8 @@ export default function FilesPage() {
 
 
             try {
-                await axios.post( //save answer from backend in response
-                    "http://localhost:8000/upload_files", formData, { //1. send file content (binary) via fromdata
+                await api.post( //save answer from backend in response
+                    `/upload_files`, formData, { //1. send file content (binary) via fromdata
                         onUploadProgress: (progressEvent) => {
                             const progress = Math.round(
                                 (progressEvent.loaded * 100) / (progressEvent.total || 1),
@@ -131,7 +129,7 @@ export default function FilesPage() {
 
         //2. gather filenames for "processing files" endpoint and send seperate
         const filenames = files.map(f => f.file.name);
-        await axios.post("http://localhost:8000/process_files", {
+        await api.post(`/process_files`, {
             files: filenames.map(name => ({
                 filename: name,
                 category: fileCategory[name]?.value || null //initially --> category = null
@@ -147,10 +145,8 @@ export default function FilesPage() {
     async function onRemoveServer(i: number) {
         const filename_id = serverFiles[i].filename;
         //delete backend
-        await fetch(`http://localhost:8000/files/${filename_id}`, {
-                method: "DELETE"
-            },
-        )
+        await api.delete(`/files/${filename_id}`)
+
         //await = wait until deleted from server then call refreshServerFiles()
         await refreshServerFiles()
     }
@@ -589,7 +585,7 @@ function ServerFileList({
 
     async function sendCategory(filename: string, category: string | null) {
         try {
-            await axios.post("http://localhost:8000/update_category", {
+            await api.post(`/update_category`, {
                 filename,
                 category,
             });
