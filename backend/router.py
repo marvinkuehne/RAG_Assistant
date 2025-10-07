@@ -21,8 +21,10 @@ app = FastAPI()
 
 # allowed origins
 origins = [
-    "http://localhost:5174",
     "http://localhost:5173",
+    "http://localhost:5174",
+    "http://127.0.0.1:5173",
+    "http://127.0.0.1:5174",
     "http://localhost:8000",
     "https://lambent-tapioca-db599c.netlify.app",
 ]
@@ -30,7 +32,7 @@ origins = [
 # Block unauthorized requrests
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],
+    allow_origins=origins,
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
@@ -103,12 +105,11 @@ async def get_category():
 
     # Gather all categories from metadata
     cats = []
-
     for meta in metas:
         if not meta:
             continue
-        cat = meta.get("category")
-        if cat and cat != "Uncategorized" and cat not in cats:
+        cat = (meta.get("category") or "").strip()
+        if cat and cat not in cats:
             cats.append(cat)
 
     return {"categories": cats}
@@ -140,9 +141,11 @@ async def processFiles(files: FileList):
     chunks = split_documents(docs)
     embeddings = get_embedding()
 
-    # Add Uncategorized category to each file
+    # normalize source to just the filename; DO NOT set category
     for chunk in chunks:
-        chunk.metadata["category"] = "Uncategorized"
+        # keep only the base filename in metadata
+        src = chunk.metadata.get("source") or ""
+        chunk.metadata["source"] = os.path.basename(src)
 
     ids = create_ids(chunks)
     add_to_chroma(embeddings, chunks, ids)
@@ -153,13 +156,20 @@ async def processFiles(files: FileList):
 # Helper @app.get("/files") : get stored category for each file in Chroma
 def _get_category_for_file(vs, filename: str) -> str | None:
     res = vs.get(where={"source": filename}, include=["metadatas"])
-    metas = res.get("metadatas", [])
-    # Falls verschachtelt, flachziehen
+    metas = res.get("metadatas", []) or []
     if metas and isinstance(metas[0], list):
         metas = [m for sub in metas for m in sub]
+    if not metas:
+        res = vs.get(where={"source": {"$contains": filename}}, include=["metadatas"])
+        metas = res.get("metadatas", []) or []
+        if metas and isinstance(metas[0], list):
+            metas = [m for sub in metas for m in sub]
     for meta in metas:
-        if meta and meta.get("category"):
-            return meta["category"]
+        if not meta:
+            continue
+        cat = meta.get("category")
+        if cat not in (None, "", "Uncategorized"):
+            return cat
     return None
 
 
@@ -171,27 +181,34 @@ async def showFiles():
         full_path = os.path.join(UploadFolder, file)
         size = os.path.getsize(full_path)
         ctype = mimetypes.guess_type(full_path)[0] or "unknown"
-
-        cat = _get_category_for_file(vs, file) or "Uncategorized"
-
+        cat = _get_category_for_file(vs, file)
         out.append({
             "filename": file,
             "size": size,
             "content_type": ctype,
-            "category": cat,
+            "category": cat,  # can be None
         })
     return {"files": out}
 
 
 @app.delete("/files/{filename}")
 async def deleteFile(filename: str):
+    #remove file from uploadfolder
     path_file_delete = os.path.join(UploadFolder, filename)
     try:
         os.remove(path_file_delete)
-        print(f"File '{path_file_delete}' deleted successfully.")
     except FileNotFoundError:
-        (
-            print(f"File '{path_file_delete}' not found."))
+        pass
+
+    # delete files vectors
+    vs = get_vectorstore()
+    try:
+        vs._collection.delete(where={"source": {"$contains": filename}})
+        vs._client.persist()
+    except Exception as e:
+        print("vector delete warning:", e)
+
+    return {"ok": True}
 
 
 if __name__ == "__main__":

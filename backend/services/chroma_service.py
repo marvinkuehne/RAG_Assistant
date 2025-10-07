@@ -1,29 +1,21 @@
+import os
+
 def update_category(vectorstore, filename: str, new_category: str | None):
-    # 1) Betroffene Chunks holen
-    results = vectorstore.get(where={"source": filename})
+    results = vectorstore.get(where={"source": {"$eq": filename}})
     ids = results.get("ids", []) or []
     if not ids:
         return {"status": "error", "message": f"No chunks found for {filename}"}
 
-    # 2) Null/Leeren-Wert robust behandeln -> auf "Uncategorized" setzen
-    cat = new_category or "Uncategorized"
+    # None = clear the category
+    meta_val = {"category": new_category, "source": os.path.basename(filename)}
 
-    # 3) Metadaten-Update über die unterliegende Chroma-Collection
     vectorstore._collection.update(
         ids=ids,
-        metadatas=[{"category": cat}] * len(ids),  # gleiche Länge wie ids
+        metadatas=[meta_val] * len(ids),
     )
-
-    # 4) Auf Platte persistieren: über den Client, nicht den Wrapper
     try:
         vectorstore._client.persist()
     except Exception as e:
-        # kein harter Fehler – nur zur Diagnose
         print("persist warning:", e)
 
-    return {
-        "status": "success",
-        "updated": len(ids),
-        "filename": filename,
-        "new_category": cat,
-    }
+    return {"status": "success", "updated": len(ids), "filename": filename, "new_category": new_category}

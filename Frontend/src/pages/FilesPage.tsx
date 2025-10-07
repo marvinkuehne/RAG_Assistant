@@ -46,8 +46,8 @@ export default function FilesPage() {
 
     //Refresh ServerFilelist
     async function refreshServerFiles() {
-       const { data } =  await api.get(`${import.meta.env.VITE_API_URL}/files`)
-                setServerFiles(data.files); // save json
+        const {data} = await api.get(`/files`)
+        setServerFiles(data.files); // save json
 
     }
 
@@ -136,660 +136,665 @@ export default function FilesPage() {
             }))
         });
 
+        // Everything finished → mark upload done
         setUploading(false);
-        refreshServerFiles()
-        setTimeout(() => setFiles([]), 1000); //clear files from upload mask automatically after 1s after successful upload
+
+        // Wait a bit so "Completed" shows, then clear mask + refresh list
+        setTimeout(() => {
+            setFiles([]);          // clear upload list
+            refreshServerFiles();  // update server file table
+        }, 1000);
     }
 
-    //remove from Server
-    async function onRemoveServer(i: number) {
-        const filename_id = serverFiles[i].filename;
-        //delete backend
-        await api.delete(`/files/${filename_id}`)
+        //remove from Server
+        async function onRemoveServer(i: number) {
+            const filename_id = serverFiles[i].filename;
+            //delete backend
+            await api.delete(`/files/${filename_id}`)
 
-        //await = wait until deleted from server then call refreshServerFiles()
-        await refreshServerFiles()
-    }
-
-    //remove all selected files from Server
-    async function deleteSelected() {
-        for (const i of selectedRows) {
-            await onRemoveServer(i)
+            //await = wait until deleted from server then call refreshServerFiles()
+            await refreshServerFiles()
         }
-        await refreshServerFiles()
-        setSelectedRows([]) // clear selection afterwards
-    }
+
+        //remove all selected files from Server
+        async function deleteSelected() {
+            for (const i of selectedRows) {
+                await onRemoveServer(i)
+            }
+            await refreshServerFiles()
+            setSelectedRows([]) // clear selection afterwards
+        }
 
 
-    //remove from upload mask
-    function removeFile(id: string) {
-        setFiles(prevFiles => prevFiles.filter(item => item.id !== id))
-    }
+        //remove from upload mask
+        function removeFile(id: string) {
+            setFiles(prevFiles => prevFiles.filter(item => item.id !== id))
+        }
 
-    function handleClear() {
-        setFiles([])
-    }
+        function handleClear() {
+            setFiles([])
+        }
 
 
-    return (
-        <div className="flex flex-col gap-4">
-            <h2 className="text-xl font-bold">File Upload</h2>
-            <div className="flex gap-2">
-                <FileInput
-                    inputRef={inputRef}
-                    disabled={uploading}
-                    onFileSelect={handleFileSelect}
-                />
-                <ActionButtons
-                    disabled={files.length === 0 || uploading}
-                    onUpload={handleUpload}
-                    onClear={handleClear}
-                />
-            </div>
-            <FileList files={files} onRemove={removeFile} uploading={uploading}></FileList>
-            <div>
-                <ServerFileList
-                    files={serverFiles}
-                    onRemoveServer={onRemoveServer}
-                    selectedRows={selectedRows}
-                    setSelectedRows={setSelectedRows}
-                    checked={false}
-                    setChecked={false}
-                    fileCategory={fileCategory}
-                    setFileCategory={setFileCategory}
-                    selectCategory={selectCategory}
-                    setSelectCategory={setSelectCategory}
-                    filterCategory={filterCategory}
-                    setFilterCategory={setFilterCategory}
-                />
+        return (
+            <div className="flex flex-col gap-4">
+                <h2 className="text-xl font-bold">File Upload</h2>
+                <div className="flex gap-2">
+                    <FileInput
+                        inputRef={inputRef}
+                        disabled={uploading}
+                        onFileSelect={handleFileSelect}
+                    />
+                    <ActionButtons
+                        disabled={files.length === 0 || uploading}
+                        onUpload={handleUpload}
+                        onClear={handleClear}
+                    />
+                </div>
+                <FileList files={files} onRemove={removeFile} uploading={uploading}></FileList>
+                <div>
+                    <ServerFileList
+                        files={serverFiles}
+                        onRemoveServer={onRemoveServer}
+                        selectedRows={selectedRows}
+                        setSelectedRows={setSelectedRows}
+                        checked={false}
+                        setChecked={false}
+                        fileCategory={fileCategory}
+                        setFileCategory={setFileCategory}
+                        selectCategory={selectCategory}
+                        setSelectCategory={setSelectCategory}
+                        filterCategory={filterCategory}
+                        setFilterCategory={setFilterCategory}
+                    />
 
-            </div>
-            <div>
-                <button
-                    onClick={deleteSelected}
-                    className={`px-2 py-1 text-sm rounded cursor-pointer font-semibold 
+                </div>
+                <div>
+                    <button
+                        onClick={deleteSelected}
+                        className={`px-2 py-1 text-sm rounded cursor-pointer font-semibold 
                     ${selectedRows.length === 0
-                        ? "bg-gray-700 text-white cursor-not-allowed opacity-50"
-                        : "bg-red-500 text-white hover:bg-red-700 cursor-pointer"}`}>
-                    Delete selected
+                            ? "bg-gray-700 text-white cursor-not-allowed opacity-50"
+                            : "bg-red-500 text-white hover:bg-red-700 cursor-pointer"}`}>
+                        Delete selected
 
-                </button>
-            </div>
+                    </button>
+                </div>
 
 
-        </div>)
-}
+            </div>)
+    }
 
 
 // Subcomponent: Select Files Button
 //Props: access function from parent component
-type FileInputProps = {
-    inputRef: React.RefObject<HTMLInputElement>
-    disabled: boolean //disable input
-    onFileSelect: (e: ChangeEvent<HTMLInputElement>) => void
-}
+    type FileInputProps = {
+        inputRef: React.RefObject<HTMLInputElement>
+        disabled: boolean //disable input
+        onFileSelect: (e: ChangeEvent<HTMLInputElement>) => void
+    }
 
-function FileInput({inputRef, disabled, onFileSelect}: FileInputProps) {
-    return (
-        <>
-            {/*create HTML input tag*/}
-            <input
-                type="file"
-                ref={inputRef}
-                onChange={onFileSelect}
-                multiple
-                className="hidden"
-                id="file-upload"
-                disabled={disabled}
-            />
-            <label
-                htmlFor="file-upload"
-                className="flex cursor-pointer items-center gap-2 rounded-md bg-gray-700 px-6 py-2 hover:opacity-90"
-            >
-                <Plus size={18}/>
-                Select Files
-            </label>
-        </>
-    );
-}
+    function FileInput({inputRef, disabled, onFileSelect}: FileInputProps) {
+        return (
+            <>
+                {/*create HTML input tag*/}
+                <input
+                    type="file"
+                    ref={inputRef}
+                    onChange={onFileSelect}
+                    multiple
+                    className="hidden"
+                    id="file-upload"
+                    disabled={disabled}
+                />
+                <label
+                    htmlFor="file-upload"
+                    className="flex cursor-pointer items-center gap-2 rounded-md bg-gray-700 px-6 py-2 hover:opacity-90"
+                >
+                    <Plus size={18}/>
+                    Select Files
+                </label>
+            </>
+        );
+    }
 
 //Subcomponent: Action Button
-type ActionButtonsProps = {
-    disabled: boolean;
-    onUpload: () => void;
-    onClear: () => void;
-};
+    type ActionButtonsProps = {
+        disabled: boolean;
+        onUpload: () => void;
+        onClear: () => void;
+    };
 
-function ActionButtons({onUpload, onClear, disabled}: ActionButtonsProps) {
-    const base = "flex items-center gap-2 rounded-md px-6 py-2 font-semibold text-black bg-gradient-to-r from-blue-500 to-blue-700 hover:opacity-80 cursor-pointer disabled:from-gray-700 disabled:to-gray-700 disabled:text-white disabled:opacity-50 disabled:cursor-not-allowed"
-    return (
-        <>
-            <button
-                onClick={onUpload}
-                disabled={disabled}
-                className={base}
-            >
-                <Upload size={18}/>
-                Upload
-            </button>
-            <button
-                onClick={onClear}
-                className={base}
-                disabled={disabled}
-            >
-                <Trash2 size={18}/>
-                Clear All
-            </button>
-        </>
-    );
-}
+    function ActionButtons({onUpload, onClear, disabled}: ActionButtonsProps) {
+        const base = "flex items-center gap-2 rounded-md px-6 py-2 font-semibold text-black bg-gradient-to-r from-blue-500 to-blue-700 hover:opacity-80 cursor-pointer disabled:from-gray-700 disabled:to-gray-700 disabled:text-white disabled:opacity-50 disabled:cursor-not-allowed"
+        return (
+            <>
+                <button
+                    onClick={onUpload}
+                    disabled={disabled}
+                    className={base}
+                >
+                    <Upload size={18}/>
+                    Upload
+                </button>
+                <button
+                    onClick={onClear}
+                    className={base}
+                    disabled={disabled}
+                >
+                    <Trash2 size={18}/>
+                    Clear All
+                </button>
+            </>
+        );
+    }
 
 // Subcomponent: Show File List after select Files
-type FileListProps = {
-    files: FileWithProgress[] //receive array
-    onRemove: (id: string) => void
-    uploading: boolean
+    type FileListProps = {
+        files: FileWithProgress[] //receive array
+        onRemove: (id: string) => void
+        uploading: boolean
 
 
-}
+    }
 
-function FileList({files, onRemove, uploading}: FileListProps) { //renders for each file in files a FileItem
-    return (
-        <div className="spacey-y-2">
-            <h3 className="font-semibold">Files:</h3>
+    function FileList({files, onRemove, uploading}: FileListProps) { //renders for each file in files a FileItem
+        return (
             <div className="spacey-y-2">
-                {files.map((file) => (
-                    // give each File these props
-                    <FileItem
-                        key={file.id}
-                        file={file}
-                        onRemove={onRemove}
-                        uploading={uploading}
-                    ></FileItem>)
-                )}
+                <h3 className="font-semibold">Files:</h3>
+                <div className="spacey-y-2">
+                    {files.map((file) => (
+                        // give each File these props
+                        <FileItem
+                            key={file.id}
+                            file={file}
+                            onRemove={onRemove}
+                            uploading={uploading}
+                        ></FileItem>)
+                    )}
+                </div>
+
             </div>
 
-        </div>
-
-    )
-}
+        )
+    }
 
 
 //Subcomponent: FileItem within FileList
-type FileItemProps = {
-    file: FileWithProgress;
-    onRemove: (id: string) => void;
-    uploading: boolean;
-};
+    type FileItemProps = {
+        file: FileWithProgress;
+        onRemove: (id: string) => void;
+        uploading: boolean;
+    };
 
-function FileItem({file, onRemove, uploading}: FileItemProps) { //state = file and not files due to FileList function
-    const Icon = getFileIcon(file.file.type);
+    function FileItem({file, onRemove, uploading}: FileItemProps) { //state = file and not files due to FileList function
+        const Icon = getFileIcon(file.file.type);
 
-    return (
-        <div className="space-y-2 rounded-md bg-gray-700 p-4">
-            <div className="flex items-start justify-between">
-                <div className="flex items-center gap-3">
-                    <Icon size={40} className="text-gray-500"/>
-                    <div className="flex flex-col">
-                        <span className="font-medium">{file.file.name}</span>
-                        <div className="flex items-center gap-2 text-xs text-gray-400">
-                            <span>{formatFileSize(file.file.size)}</span>
-                            <span>•</span>
-                            <span>{file.file.type || 'Unknown type'}</span>
+        return (
+            <div className="space-y-2 rounded-md bg-gray-700 p-4">
+                <div className="flex items-start justify-between">
+                    <div className="flex items-center gap-3">
+                        <Icon size={40} className="text-gray-500"/>
+                        <div className="flex flex-col">
+                            <span className="font-medium">{file.file.name}</span>
+                            <div className="flex items-center gap-2 text-xs text-gray-400">
+                                <span>{formatFileSize(file.file.size)}</span>
+                                <span>•</span>
+                                <span>{file.file.type || 'Unknown type'}</span>
+                            </div>
                         </div>
                     </div>
+                    {!uploading && (
+                        <button onClick={() => onRemove(file.id)} className="bg-none p-0 cursor-pointer">
+                            <X size={16} className="text-white hover:text-gray-400"/>
+                        </button>
+                    )}
                 </div>
-                {!uploading && (
-                    <button onClick={() => onRemove(file.id)} className="bg-none p-0 cursor-pointer">
-                        <X size={16} className="text-white hover:text-gray-400"/>
-                    </button>
-                )}
+                <div className="text-right text-xs">
+                    {file.uploaded ? 'Completed' : `${Math.round(file.progress)}%`}
+                </div>
+                <ProgressBar progress={file.progress}/>
             </div>
-            <div className="text-right text-xs">
-                {file.uploaded ? 'Completed' : `${Math.round(file.progress)}%`}
-            </div>
-            <ProgressBar progress={file.progress}/>
-        </div>
-    );
-}
+        );
+    }
 
 
 //Subcomponent: ProgressBar
-type ProgressBarProps =
-    {
-        progress: number
-    }
-
-function ProgressBar({progress}: ProgressBarProps) {
-    return (
-        <div className="h-2 w-full overflow-hidden rounded-full bg-gray-800">
-            <div
-                className="h-full bg-gray-500 transition-all duration-300"
-                style={{width: `${progress}%`}}
-            />
-        </div>
-    );
-}
-
-
-type ServerFileListProps = {
-    files: ServerFile[];
-    onRemoveServer: (i: number) => void;
-    selectedRows: number[];
-    checked: boolean;
-    setChecked: boolean;
-    setSelectedRows: React.Dispatch<React.SetStateAction<number[]>>;
-    selectCategory: Option[];
-    setSelectCategory: React.Dispatch<React.SetStateAction<Option[]>>;
-    fileCategory: FileCategoryMap;
-    setFileCategory: React.Dispatch<React.SetStateAction<FileCategoryMap>>;
-    filterCategory: Option | null;
-    setFilterCategory: React.Dispatch<React.SetStateAction<Option | null>>;
-};
-
-
-function ServerFileList({
-                            files,
-                            onRemoveServer,
-                            selectedRows,
-                            setSelectedRows,
-                            selectCategory,
-                            setSelectCategory,
-                            fileCategory,
-                            setFileCategory,
-                            filterCategory,
-                            setFilterCategory
-                        }: ServerFileListProps) {
-
-    //state for serverfilelist
-    const [showFilter, setShowFilter] = useState(false);
-
-    function toggleRowSelection(i: number) {
-        setSelectedRows(prev => {
-            if (prev.includes(i)) { //2. check if selected row already part of prev selected row state
-                //remove
-                return prev.filter(item => item !== i)
-            } else {
-                //add
-                return [...prev, i] //add to array of indexes of checked rows (e.g. [1,4,9]
-
-            }
-        })
-    }
-
-    function toggleSelectAll() {
-        if (selectedRows.length === files.length) {
-            setSelectedRows([])
-        } else {
-            setSelectedRows(files.map((_, index) => index)) // store all files indexes in state
-
-        }
-    }
-
-    // --- Notion-like category management --------------------------------------
-
-    const TAG_PALETTE = [
-        '#10b981', '#3b82f6', '#f59e0b', '#ef4444',
-        '#8b5cf6', '#14b8a6', '#eab308', '#f43f5e',
-        '#22c55e', '#6366f1'
-    ];
-
-    function colorFromString(s: string): string {
-        let h = 0;
-        for (let i = 0; i < s.length; i++) h = s.charCodeAt(i) + ((h << 5) - h);
-        return TAG_PALETTE[Math.abs(h) % TAG_PALETTE.length];
-    }
-
-    function toValue(label: string): string {
-        return label.trim().toLowerCase().replace(/\s+/g, '-');
-    }
-
-
-    // 🔹 NEU: Serverwerte in lokale States übernehmen
-    useEffect(() => {
-        const nextFileCategory: Record<string, Option | null> = {};
-        const foundOptions: Option[] = [];
-
-        for (const f of files) {
-            const label = f.category || null;
-            if (label) {
-                const opt: Option = {label, value: toValue(label), color: colorFromString(label)};
-                nextFileCategory[f.filename] = opt;
-
-                if (!foundOptions.some(o => o.value === opt.value)) {
-                    foundOptions.push(opt);
-                }
-            } else {
-                nextFileCategory[f.filename] = null;
-            }
+    type ProgressBarProps =
+        {
+            progress: number
         }
 
-        // 1) pro Datei die aktuelle Kategorie setzen
-        setFileCategory(nextFileCategory);
-
-        // 2) globale Options-Liste um neue Kategorien ergänzen (keine Duplikate)
-        setSelectCategory(prev => {
-            const merged = [...prev];
-            for (const o of foundOptions) {
-                if (!merged.some(m => m.value === o.value)) merged.push(o);
-            }
-            return merged;
-        });
-    }, [files]); // <-- wenn neue /files kommen, hydrieren
-
-
-    const upsertGlobalOption = (opt: Option) =>
-        setSelectCategory(prev =>
-            prev.some(o => o.value === opt.value) ? prev : [...prev, opt]
+    function ProgressBar({progress}: ProgressBarProps) {
+        return (
+            <div className="h-2 w-full overflow-hidden rounded-full bg-gray-800">
+                <div
+                    className="h-full bg-gray-500 transition-all duration-300"
+                    style={{width: `${progress}%`}}
+                />
+            </div>
         );
+    }
 
 
-    //send new created category to backend
-    const createForFile = (filename: string, label: string) => {
-        const clean = label.trim();
-        if (!clean) return;
+    type ServerFileListProps = {
+        files: ServerFile[];
+        onRemoveServer: (i: number) => void;
+        selectedRows: number[];
+        checked: boolean;
+        setChecked: boolean;
+        setSelectedRows: React.Dispatch<React.SetStateAction<number[]>>;
+        selectCategory: Option[];
+        setSelectCategory: React.Dispatch<React.SetStateAction<Option[]>>;
+        fileCategory: FileCategoryMap;
+        setFileCategory: React.Dispatch<React.SetStateAction<FileCategoryMap>>;
+        filterCategory: Option | null;
+        setFilterCategory: React.Dispatch<React.SetStateAction<Option | null>>;
+    };
 
-        const opt: Option = {
-            label: clean,
-            value: toValue(clean),
-            color: colorFromString(clean),
+
+    function ServerFileList({
+                                files,
+                                onRemoveServer,
+                                selectedRows,
+                                setSelectedRows,
+                                selectCategory,
+                                setSelectCategory,
+                                fileCategory,
+                                setFileCategory,
+                                filterCategory,
+                                setFilterCategory
+                            }: ServerFileListProps) {
+
+        //state for serverfilelist
+        const [showFilter, setShowFilter] = useState(false);
+
+        function toggleRowSelection(i: number) {
+            setSelectedRows(prev => {
+                if (prev.includes(i)) { //2. check if selected row already part of prev selected row state
+                    //remove
+                    return prev.filter(item => item !== i)
+                } else {
+                    //add
+                    return [...prev, i] //add to array of indexes of checked rows (e.g. [1,4,9]
+
+                }
+            })
+        }
+
+        function toggleSelectAll() {
+            if (selectedRows.length === files.length) {
+                setSelectedRows([])
+            } else {
+                setSelectedRows(files.map((_, index) => index)) // store all files indexes in state
+
+            }
+        }
+
+        // --- Notion-like category management --------------------------------------
+
+        const TAG_PALETTE = [
+            '#10b981', '#3b82f6', '#f59e0b', '#ef4444',
+            '#8b5cf6', '#14b8a6', '#eab308', '#f43f5e',
+            '#22c55e', '#6366f1'
+        ];
+
+        function colorFromString(s: string): string {
+            let h = 0;
+            for (let i = 0; i < s.length; i++) h = s.charCodeAt(i) + ((h << 5) - h);
+            return TAG_PALETTE[Math.abs(h) % TAG_PALETTE.length];
+        }
+
+        function toValue(label: string): string {
+            return label.trim().toLowerCase().replace(/\s+/g, '-');
+        }
+
+
+        // 🔹 NEU: Serverwerte in lokale States übernehmen
+        useEffect(() => {
+            const nextFileCategory: Record<string, Option | null> = {};
+            const foundOptions: Option[] = [];
+
+            for (const f of files) {
+                const label = f.category || null;
+                if (label) {
+                    const opt: Option = {label, value: toValue(label), color: colorFromString(label)};
+                    nextFileCategory[f.filename] = opt;
+
+                    if (!foundOptions.some(o => o.value === opt.value)) {
+                        foundOptions.push(opt);
+                    }
+                } else {
+                    nextFileCategory[f.filename] = null;
+                }
+            }
+
+            // 1) pro Datei die aktuelle Kategorie setzen
+            setFileCategory(nextFileCategory);
+
+            // 2) globale Options-Liste um neue Kategorien ergänzen (keine Duplikate)
+            setSelectCategory(prev => {
+                const merged = [...prev];
+                for (const o of foundOptions) {
+                    if (!merged.some(m => m.value === o.value)) merged.push(o);
+                }
+                return merged;
+            });
+        }, [files]); // <-- wenn neue /files kommen, hydrieren
+
+
+        const upsertGlobalOption = (opt: Option) =>
+            setSelectCategory(prev =>
+                prev.some(o => o.value === opt.value) ? prev : [...prev, opt]
+            );
+
+
+        //send new created category to backend
+        const createForFile = (filename: string, label: string) => {
+            const clean = label.trim();
+            if (!clean) return;
+
+            const opt: Option = {
+                label: clean,
+                value: toValue(clean),
+                color: colorFromString(clean),
+            };
+
+            upsertGlobalOption(opt);
+            setFileCategory(prev => ({...prev, [filename]: opt}));
+
+            // Send new categor
+            sendCategory(filename, clean);
         };
 
-        upsertGlobalOption(opt);
-        setFileCategory(prev => ({...prev, [filename]: opt}));
 
-        // Send new categor
-        sendCategory(filename, clean);
-    };
-
-
-    const deleteCategoryEverywhere = (value: string) => {
-        // remove from global set
-        setSelectCategory(prev => prev.filter(o => o.value !== value));
-        // clear on any file that used it
-        setFileCategory(prev => {
-            const next: Record<string, Option | null> = {...prev};
-            Object.keys(next).forEach(fn => {
-                if (next[fn]?.value === value) next[fn] = null;
+        const deleteCategoryEverywhere = (value: string) => {
+            // remove from global set
+            setSelectCategory(prev => prev.filter(o => o.value !== value));
+            // clear on any file that used it
+            setFileCategory(prev => {
+                const next: Record<string, Option | null> = {...prev};
+                Object.keys(next).forEach(fn => {
+                    if (next[fn]?.value === value) next[fn] = null;
+                });
+                return next;
             });
-            return next;
-        });
-    };
+        };
 
-    // Custom option row with inline delete button (Notion-like)
-    const makeCustomOption =
-        (onDelete: (value: string) => void) =>
-            (props: OptionProps<Option, false>) => {
-                const {data, isFocused, isSelected} = props;
-                return (
-                    <components.Option {...props}>
-                        <div
-                            className={`flex items-center justify-between px-2 py-1 text-sm ${
-                                isFocused ? 'bg-gray-700' : 'bg-transparent'
-                            }`}
-                        >
-                            <div className="flex items-center gap-2">
+        // Custom option row with inline delete button (Notion-like)
+        const makeCustomOption =
+            (onDelete: (value: string) => void) =>
+                (props: OptionProps<Option, false>) => {
+                    const {data, isFocused, isSelected} = props;
+                    return (
+                        <components.Option {...props}>
+                            <div
+                                className={`flex items-center justify-between px-2 py-1 text-sm ${
+                                    isFocused ? 'bg-gray-700' : 'bg-transparent'
+                                }`}
+                            >
+                                <div className="flex items-center gap-2">
             <span
                 className="inline-block h-2 w-2 rounded-full"
                 style={{background: data.color}}
             />
-                                <span style={{color: isSelected ? 'white' : data.color, fontWeight: 600}}>
+                                    <span style={{color: isSelected ? 'white' : data.color, fontWeight: 600}}>
               {data.label}
             </span>
-                            </div>
-                            <button
-                                className="p-1 rounded hover:bg-gray-800"
-                                title="Delete category"
-                                onMouseDown={(e) => {
-                                    e.preventDefault();
-                                    e.stopPropagation();
-                                    onDelete(data.value);
-                                }}
-                            >
-                                <Trash2 size={14}/>
-                            </button>
-                        </div>
-                    </components.Option>
-                );
-            };
-
-    const colorStyles: StylesConfig<Option, false> = {
-        // NEW: cap overall width
-        container: (base) => ({
-            ...base,
-            width: 200,            // e.g. 200px; or '12rem' or 'fit-content'
-            minWidth: 0,
-            flex: "0 0 auto",
-        }),
-        // ke
-        control: (base) => ({
-            ...base,
-            backgroundColor: '#1f2937',
-            borderColor: '#374151',
-            minHeight: '32px',
-            fontSize: '0.85rem',
-        }),
-        singleValue: (base, {data}) => ({
-            ...base,
-            color: data.color,
-            fontWeight: 600,
-        }),
-        option: (base, {data, isFocused, isSelected}) => ({
-            ...base,
-            backgroundColor: isSelected ? data.color : isFocused ? '#374151' : '#1f2937',
-            color: isSelected ? 'white' : data.color,
-            cursor: 'pointer',
-        }),
-        menu: (base) => ({...base, zIndex: 30}),
-    };
-
-    async function sendCategory(filename: string, category: string | null) {
-        try {
-            await api.post(`/update_category`, {
-                filename,
-                category,
-            });
-            console.log("Category updated:", category);
-        } catch (error) {
-            console.error("Error updating category", error);
-        }
-    }
-
-    //close filter when clicking outside
-    useEffect(() => {
-        const close = (e: MouseEvent) => {
-            const target = e.target as HTMLElement;
-            if (!target.closest('.category-filter')) setShowFilter(false);
-        };
-        document.addEventListener('click', close);
-        return () => document.removeEventListener('click', close);
-    }, []);
-
-    return (
-        <div>
-            <h4>Files on Server</h4>
-
-            <table className="w-full border-collapse">
-                <thead className="bg-gray-900 text-white">
-                <tr>
-                    <th className="px-4 py-2 text-left">
-                        <input
-                            checked={selectedRows.length === files.length && files.length > 0}
-                            onChange={toggleSelectAll}
-                            className="cursor-pointer"
-                            type="checkbox"
-                        />
-                    </th>
-                    <th className="px-4 py-2 text-left">File Name</th>
-
-                    {/* Category header with filter toggle */}
-                    <th className="px-4 py-2 text-left relative group category-filter">
-                        <div className="flex items-center gap-2">
-                            Category
-                            <button
-                                onClick={() => setShowFilter((prev) => !prev)}
-                                className="text-gray-400 hover:text-white transition-transform duration-200"
-                                style={{
-                                    transform: showFilter ? "rotate(180deg)" : "rotate(0deg)",
-                                }}
-                            >
-                                ▼
-                            </button>
-                        </div>
-
-                        {showFilter && (
-                            <div
-                                className="absolute top-6 left-0 z-50 bg-gray-800 border border-gray-700 rounded-md shadow-lg p-2 w-48">
-                                <CreatableSelect<Option, false>
-                                    placeholder="Filter..."
-                                    isClearable
-                                    options={selectCategory}
-                                    value={filterCategory}
-                                    onChange={(opt) => setFilterCategory(opt ?? null)}
-                                    styles={{
-                                        control: (base) => ({
-                                            ...base,
-                                            backgroundColor: '#1f2937',   // dunkles Grau
-                                            borderColor: '#374151',
-                                            minHeight: '32px',
-                                            fontSize: '0.85rem',
-                                            color: 'white',                // weiße Schrift
-                                        }),
-                                        input: (base) => ({
-                                            ...base,
-                                            color: 'white',                // weiße Schrift im Eingabefeld
-                                        }),
-                                        placeholder: (base) => ({
-                                            ...base,
-                                            color: '#9ca3af',              // hellgrauer Platzhaltertext
-                                        }),
-                                        singleValue: (base, {data}) => ({
-                                            ...base,
-                                            color: data.color || 'white',  // farbige Kategorie oder weiß
-                                            fontWeight: 600,
-                                        }),
-                                        option: (base, {isFocused, isSelected}) => ({
-                                            ...base,
-                                            backgroundColor: isSelected
-                                                ? '#2563eb'                  // blau bei Auswahl
-                                                : isFocused
-                                                    ? '#374151'                  // grau bei Hover
-                                                    : '#111827',                 // sehr dunkler Hintergrund
-                                            color: isSelected ? 'white' : 'white',
-                                            cursor: 'pointer',
-                                        }),
-                                        menu: (base) => ({
-                                            ...base,
-                                            backgroundColor: '#111827',    // Menü-Hintergrund
-                                            zIndex: 40,
-                                        }),
-                                    }}
-                                />
-                            </div>
-                        )}
-                    </th>
-
-                    <th className="px-4 py-2 text-left">Size (MB)</th>
-                    <th className="px-4 py-2 text-left">Type</th>
-                    <th className="px-4 py-2 text-left">Date Uploaded</th>
-                    <th className="px-4 py-2 text-left">Actions</th>
-                </tr>
-                </thead>
-
-                <tbody>
-                {/*gives every file the following array object <tr> (wrapper with key = {i}*/}
-
-                {files
-                    .filter(
-                        (file) =>
-                            !filterCategory ||
-                            file.category?.toLowerCase() ===
-                            filterCategory.label.toLowerCase()
-                    )
-                    .map((file, i) => (
-                        <tr key={i} className="hover:bg-gray-700 even:bg-gray-800">
-                            <td className="px-4 py-2">
-                                <input
-                                    className="cursor-pointer"
-                                    type="checkbox"
-                                    checked={selectedRows.includes(i)} //Index of row already stored in state = checked
-                                    onChange={() => toggleRowSelection(i)}//1. when clicking, pass the function the files rows index
-                                />
-                            </td>
-                            <td className="px-4 py-2 flex items-center gap-2">
-                                <FileIcon/> {file.filename}
-                            </td>
-
-                            <td className="px-4 py-2">
-                                <CreatableSelect<Option, false>
-                                    isClearable
-                                    options={selectCategory}
-                                    //show current category for each file
-                                    value={fileCategory[file.filename] ?? null}
-                                    //1. save category per file
-                                    onChange={(option) => {
-                                        const selected = (option as Option) ?? null;
-                                        // select / clear
-                                        setFileCategory((prev) => ({//all file + option combinations
-                                            ...prev,
-                                            [file.filename]: selected,
-                                        }));
-                                        //2.Send category to backend
-                                        sendCategory(file.filename, selected ? selected.label : null);
-                                    }}
-                                    onCreateOption={(input) =>
-                                        createForFile(file.filename, input)
-                                    }
-                                    formatCreateLabel={(input) => `+ Create "${input}"`}
-                                    noOptionsMessage={() => "Type to create"}
-                                    components={{
-                                        Option: makeCustomOption(deleteCategoryEverywhere),
-                                    }}
-                                    styles={colorStyles}
-                                    placeholder="Select or create..."
-                                />
-                            </td>
-
-                            <td className="px-4 py-2">
-                                {(file.size / (1024 * 1024)).toFixed(2)} MB
-                            </td>
-                            <td className="px-4 py-2">{file.content_type.split("/")[1]}</td>
-                            <td className="px-4 py-2">
-                                {new Date().toLocaleDateString()}
-                            </td>
-                            <td className="px-4 py-2">
+                                </div>
                                 <button
-                                    className="px-2 py-1 rounded-md text-white font-semibold hover:bg-red-700 cursor-pointer disabled:opacity-10 disabled:bg-gray-500 disabled:cursor-not-allowed"
-                                    onClick={() => onRemoveServer(i)}
+                                    className="p-1 rounded hover:bg-gray-800"
+                                    title="Delete category"
+                                    onMouseDown={(e) => {
+                                        e.preventDefault();
+                                        e.stopPropagation();
+                                        onDelete(data.value);
+                                    }}
                                 >
-                                    Delete
+                                    <Trash2 size={14}/>
                                 </button>
-                            </td>
-                        </tr>
-                    ))}
-                </tbody>
-            </table>
+                            </div>
+                        </components.Option>
+                    );
+                };
 
-            <p>{files.length} files on server</p>
-        </div>
-    );
-}
+        const colorStyles: StylesConfig<Option, false> = {
+            // NEW: cap overall width
+            container: (base) => ({
+                ...base,
+                width: 200,            // e.g. 200px; or '12rem' or 'fit-content'
+                minWidth: 0,
+                flex: "0 0 auto",
+            }),
+            // ke
+            control: (base) => ({
+                ...base,
+                backgroundColor: '#1f2937',
+                borderColor: '#374151',
+                minHeight: '32px',
+                fontSize: '0.85rem',
+            }),
+            singleValue: (base, {data}) => ({
+                ...base,
+                color: data.color,
+                fontWeight: 600,
+            }),
+            option: (base, {data, isFocused, isSelected}) => ({
+                ...base,
+                backgroundColor: isSelected ? data.color : isFocused ? '#374151' : '#1f2937',
+                color: isSelected ? 'white' : data.color,
+                cursor: 'pointer',
+            }),
+            menu: (base) => ({...base, zIndex: 30}),
+        };
+
+        async function sendCategory(filename: string, category: string | null) {
+            try {
+                await api.post(`/update_category`, {
+                    filename,
+                    category,
+                });
+                console.log("Category updated:", category);
+            } catch (error) {
+                console.error("Error updating category", error);
+            }
+        }
+
+        //close filter when clicking outside
+        useEffect(() => {
+            const close = (e: MouseEvent) => {
+                const target = e.target as HTMLElement;
+                if (!target.closest('.category-filter')) setShowFilter(false);
+            };
+            document.addEventListener('click', close);
+            return () => document.removeEventListener('click', close);
+        }, []);
+
+        return (
+            <div>
+                <h4>Files on Server</h4>
+
+                <table className="w-full border-collapse">
+                    <thead className="bg-gray-900 text-white">
+                    <tr>
+                        <th className="px-4 py-2 text-left">
+                            <input
+                                checked={selectedRows.length === files.length && files.length > 0}
+                                onChange={toggleSelectAll}
+                                className="cursor-pointer"
+                                type="checkbox"
+                            />
+                        </th>
+                        <th className="px-4 py-2 text-left">File Name</th>
+
+                        {/* Category header with filter toggle */}
+                        <th className="px-4 py-2 text-left relative group category-filter">
+                            <div className="flex items-center gap-2">
+                                Category
+                                <button
+                                    onClick={() => setShowFilter((prev) => !prev)}
+                                    className="text-gray-400 hover:text-white transition-transform duration-200"
+                                    style={{
+                                        transform: showFilter ? "rotate(180deg)" : "rotate(0deg)",
+                                    }}
+                                >
+                                    ▼
+                                </button>
+                            </div>
+
+                            {showFilter && (
+                                <div
+                                    className="absolute top-6 left-0 z-50 bg-gray-800 border border-gray-700 rounded-md shadow-lg p-2 w-48">
+                                    <CreatableSelect<Option, false>
+                                        placeholder="Filter..."
+                                        isClearable
+                                        options={selectCategory}
+                                        value={filterCategory}
+                                        onChange={(opt) => setFilterCategory(opt ?? null)}
+                                        styles={{
+                                            control: (base) => ({
+                                                ...base,
+                                                backgroundColor: '#1f2937',   // dunkles Grau
+                                                borderColor: '#374151',
+                                                minHeight: '32px',
+                                                fontSize: '0.85rem',
+                                                color: 'white',                // weiße Schrift
+                                            }),
+                                            input: (base) => ({
+                                                ...base,
+                                                color: 'white',                // weiße Schrift im Eingabefeld
+                                            }),
+                                            placeholder: (base) => ({
+                                                ...base,
+                                                color: '#9ca3af',              // hellgrauer Platzhaltertext
+                                            }),
+                                            singleValue: (base, {data}) => ({
+                                                ...base,
+                                                color: data.color || 'white',  // farbige Kategorie oder weiß
+                                                fontWeight: 600,
+                                            }),
+                                            option: (base, {isFocused, isSelected}) => ({
+                                                ...base,
+                                                backgroundColor: isSelected
+                                                    ? '#2563eb'                  // blau bei Auswahl
+                                                    : isFocused
+                                                        ? '#374151'                  // grau bei Hover
+                                                        : '#111827',                 // sehr dunkler Hintergrund
+                                                color: isSelected ? 'white' : 'white',
+                                                cursor: 'pointer',
+                                            }),
+                                            menu: (base) => ({
+                                                ...base,
+                                                backgroundColor: '#111827',    // Menü-Hintergrund
+                                                zIndex: 40,
+                                            }),
+                                        }}
+                                    />
+                                </div>
+                            )}
+                        </th>
+
+                        <th className="px-4 py-2 text-left">Size (MB)</th>
+                        <th className="px-4 py-2 text-left">Type</th>
+                        <th className="px-4 py-2 text-left">Date Uploaded</th>
+                        <th className="px-4 py-2 text-left">Actions</th>
+                    </tr>
+                    </thead>
+
+                    <tbody>
+                    {/*gives every file the following array object <tr> (wrapper with key = {i}*/}
+
+                    {files
+                        .filter(
+                            (file) =>
+                                !filterCategory ||
+                                file.category?.toLowerCase() ===
+                                filterCategory.label.toLowerCase()
+                        )
+                        .map((file, i) => (
+                            <tr key={i} className="hover:bg-gray-700 even:bg-gray-800">
+                                <td className="px-4 py-2">
+                                    <input
+                                        className="cursor-pointer"
+                                        type="checkbox"
+                                        checked={selectedRows.includes(i)} //Index of row already stored in state = checked
+                                        onChange={() => toggleRowSelection(i)}//1. when clicking, pass the function the files rows index
+                                    />
+                                </td>
+                                <td className="px-4 py-2 flex items-center gap-2">
+                                    <FileIcon/> {file.filename}
+                                </td>
+
+                                <td className="px-4 py-2">
+                                    <CreatableSelect<Option, false>
+                                        isClearable
+                                        options={selectCategory}
+                                        //show current category for each file
+                                        value={fileCategory[file.filename] ?? null}
+                                        //1. save category per file
+                                        onChange={(option) => {
+                                            const selected = (option as Option) ?? null;
+                                            // select / clear
+                                            setFileCategory((prev) => ({//all file + option combinations
+                                                ...prev,
+                                                [file.filename]: selected,
+                                            }));
+                                            //2.Send category to backend
+                                            sendCategory(file.filename, selected ? selected.label : null);
+                                        }}
+                                        onCreateOption={(input) =>
+                                            createForFile(file.filename, input)
+                                        }
+                                        formatCreateLabel={(input) => `+ Create "${input}"`}
+                                        noOptionsMessage={() => "Type to create"}
+                                        components={{
+                                            Option: makeCustomOption(deleteCategoryEverywhere),
+                                        }}
+                                        styles={colorStyles}
+                                        placeholder="Select or create..."
+                                    />
+                                </td>
+
+                                <td className="px-4 py-2">
+                                    {(file.size / (1024 * 1024)).toFixed(2)} MB
+                                </td>
+                                <td className="px-4 py-2">{file.content_type.split("/")[1]}</td>
+                                <td className="px-4 py-2">
+                                    {new Date().toLocaleDateString()}
+                                </td>
+                                <td className="px-4 py-2">
+                                    <button
+                                        className="px-2 py-1 rounded-md text-white font-semibold hover:bg-red-700 cursor-pointer disabled:opacity-10 disabled:bg-gray-500 disabled:cursor-not-allowed"
+                                        onClick={() => onRemoveServer(i)}
+                                    >
+                                        Delete
+                                    </button>
+                                </td>
+                            </tr>
+                        ))}
+                    </tbody>
+                </table>
+
+                <p>{files.length} files on server</p>
+            </div>
+        );
+    }
 
 
 //Helper functions
-const getFileIcon = (mimeType: string) => {
-    if (mimeType.startsWith('image/')) return FileImage;
-    if (mimeType.startsWith('video/')) return FileVideo;
-    if (mimeType.startsWith('audio/')) return FileAudio;
-    if (mimeType === 'application/pdf') return FileText;
-    return FileIcon;
-};
+    const getFileIcon = (mimeType: string) => {
+        if (mimeType.startsWith('image/')) return FileImage;
+        if (mimeType.startsWith('video/')) return FileVideo;
+        if (mimeType.startsWith('audio/')) return FileAudio;
+        if (mimeType === 'application/pdf') return FileText;
+        return FileIcon;
+    };
 
-const formatFileSize = (bytes: number) => {
-    if (bytes === 0) return '0 B';
-    const k = 1024;
-    const sizes = ['B', 'KB', 'MB', 'GB'];
-    const i = Math.floor(Math.log(bytes) / Math.log(k));
-    return `${parseFloat((bytes / Math.pow(k, i)).toFixed(1))} ${sizes[i]}`
-}
+    const formatFileSize = (bytes: number) => {
+        if (bytes === 0) return '0 B';
+        const k = 1024;
+        const sizes = ['B', 'KB', 'MB', 'GB'];
+        const i = Math.floor(Math.log(bytes) / Math.log(k));
+        return `${parseFloat((bytes / Math.pow(k, i)).toFixed(1))} ${sizes[i]}`
+    }
 
