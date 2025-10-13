@@ -1,6 +1,6 @@
 import os
-from langchain_community.vectorstores import Chroma
-from Loader import get_embedding, PERSIST_DIR, COLLECTION
+from langchain_chroma import Chroma
+from Loader import get_embedding, COLLECTION, get_user_chroma_dir
 from openai import OpenAI
 from dotenv import load_dotenv
 
@@ -9,20 +9,21 @@ load_dotenv()
 openai_api_key = os.getenv("OPENAI_API_KEY")
 
 
-def query_rag(query: str, categories: list[str] | None = None):
+def query_rag(query: str, user_id: str, categories: list[str] | None = None):
     # 1) DB öffnen – gleicher Pfad wie Indexing
     db = Chroma(
-        persist_directory=PERSIST_DIR,
+        persist_directory=get_user_chroma_dir(user_id),
         collection_name=COLLECTION,
         embedding_function=get_embedding(),
     )
 
     # 2) Filter bauen + LOGGEN
-    filter_dict = {"category": {"$in": categories}} if categories else None
-    print("RAG DEBUG → FILTER_USED:", filter_dict)
+    filters = {}
+    if categories:
+        filters = {"category": {"$in": categories}}
 
     # 3) Suche + Treffer loggen
-    results = db.similarity_search_with_score(query, k=4, filter=filter_dict)
+    results = db.similarity_search_with_score(query, k=4, filter=filters or None)
     print("RAG DEBUG → NUM_RESULTS:", len(results))
 
     content_list: list[str] = []
@@ -37,29 +38,35 @@ def query_rag(query: str, categories: list[str] | None = None):
         print(f"RAG DEBUG [{i}] src={src} p={page} cat={cat} score={score:.4f}")
 
     context = "\n\n---\n\n".join(content_list)
-    sources_md = "\n".join(f"- {s}" for s in sources) or "- (no sources from context)"
+
+    # # helper markdown response
+    # def format_markdown_response(text: str) -> str:
+    #     """Replace section headers with real Markdown formatting."""
+    #     formatted = text
+    #
+    #     # Ersetze bekannte Abschnittstitel durch Markdown-Überschriften
+    #     formatted = formatted.replace("TL;DR", "## TL;DR")
+    #     formatted = formatted.replace("Steps", "\n\n---\n\n## Steps")
+    #     formatted = formatted.replace("Details", "\n\n---\n\n## Details")
+    #     formatted = formatted.replace("Sources", "\n\n---\n\n## Sources")
+    #
+    #     # Falls das Modell zu viele Leerzeichen produziert
+    #     formatted = "\n".join(line.strip() for line in formatted.splitlines())
+    #     return formatted
 
     # 4) LLM
-
-    # Kein f-String! Hier gehört KEIN {context}/{query} hinein.
     STRUCTURE_GUIDE = """
-     You are a helpful assistant. Answer **only** using the CONTEXT below.
+    You are a helpful assistant. Answer **only** using the CONTEXT below.
 
-     ### FORMAT (IMPORTANT)
-     - Output must be **Markdown**.
-     - Prefer sections and lists:
-       ## TL;DR
-       ## Steps
-       ## Details
-     - Use bullet points and short paragraphs.
-     - **Do NOT include a 'Sources' section** in the body. The app renders sources separately.
-     - No code fences unless you show real code.
-     """
+    ### FORMAT
+    - Output **must be valid Markdown**.
+    - Use sections:
+      ## Summary
+    - Write clean Markdown syntax: headings, bullet lists, paragraphs.
+    - Do not output JSON or pseudo-structure.
+    """
 
     client = OpenAI(api_key=openai_api_key)
-
-    # Kontext/Frage nur EINMAL anhängen. Keine Citations hier,
-    # weil die UI die Quellen separat rendert.
     prompt = f"""{STRUCTURE_GUIDE}
 
      ### CONTEXT
@@ -71,4 +78,5 @@ def query_rag(query: str, categories: list[str] | None = None):
 
     response = client.responses.create(model="gpt-5-nano", input=prompt)
     answer = response.output_text
+
     return answer, sources

@@ -20,9 +20,11 @@ print("FILE DIR :", os.path.dirname(__file__))
 
 #Define db path
 BASE_DIR = os.path.dirname(__file__)                 # …/backend
-PERSIST_DIR = os.path.join(BASE_DIR, "db", "chroma") # EIN gemeinsamer Pfad
+PERSIST_DIR = os.path.join(BASE_DIR, "db", "chroma")
+
+def get_user_chroma_dir(user_id: str):
+    return os.path.join(BASE_DIR, "db", "users", user_id, "chroma")
 COLLECTION  = "rag-chroma"
-print("CHROMA DIR:", PERSIST_DIR)  # einmalig zum Prüfen
 
 # load variables from .env
 load_dotenv()
@@ -102,11 +104,14 @@ def create_ids(chunks):
     return ids
 
 
-def add_to_chroma(embeddings, chunks, ids):
+def add_to_chroma(embeddings, chunks, user_id: str):
+    #create user specific chroma DB
+    persist_dir = get_user_chroma_dir(user_id)
+    os.makedirs(persist_dir, exist_ok=True)
     # open DB
     vectorstore = Chroma(  # from_documents = Add/Upsert!
         embedding_function=embeddings,
-        persist_directory=PERSIST_DIR,
+        persist_directory=persist_dir,
         collection_name=COLLECTION,
     )
 
@@ -139,19 +144,19 @@ def add_to_chroma(embeddings, chunks, ids):
     return vectorstore
 
 #For changing categories in chroma
-def get_vectorstore():
-    embeddings = OpenAIEmbeddings(openai_api_key=openai_api_key)
+def get_vectorstore(user_id: str | None = None):
+    embeddings = get_embedding()
+
+    # Benutzer-spezifische Chroma DB öffnen
+    if user_id:
+        persist_dir = get_user_chroma_dir(user_id)
+    else:
+        persist_dir = PERSIST_DIR  # global fallback
+
     vectorstore = Chroma(
         embedding_function=embeddings,
-        persist_directory=PERSIST_DIR,
+        persist_directory=persist_dir,
         collection_name=COLLECTION,
     )
     return vectorstore
 
-# # Main
-# if __name__ == "__main__":
-#     docs = load_documents()
-#     chunks = split_documents(docs)
-#     embeddings = get_embedding()
-#     ids = create_ids(chunks)
-#     vectorstore = add_to_chroma(embeddings, chunks, ids)
