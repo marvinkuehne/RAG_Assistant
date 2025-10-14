@@ -1,12 +1,9 @@
-import json
 import os
-import sqlite3
 
-from fastapi import FastAPI, File, UploadFile, Form, HTTPException
+from fastapi import FastAPI, File, UploadFile, Form
 import uvicorn
 import mimetypes
 
-from openpyxl.styles.builtins import total
 from starlette.middleware.cors import CORSMiddleware
 
 from Loader import load_documents, split_documents, get_embedding, create_ids, add_to_chroma, get_user_chroma_dir
