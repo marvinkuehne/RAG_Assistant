@@ -6,12 +6,11 @@ import mimetypes
 
 from starlette.middleware.cors import CORSMiddleware
 
-from Loader import load_documents, split_documents, get_embedding, create_ids, add_to_chroma, get_user_chroma_dir
-from db.chat_db import create_session, get_sessions, save_session, load_session, conn
-from services.chroma_service import update_category
-from query_data import query_rag
+from backend.Loader import load_documents, split_documents, get_embedding, create_ids, add_to_chroma, get_user_chroma_dir, get_vectorstore
+from backend.db.chat_db import create_session, get_sessions, save_session, load_session, conn
+from backend.services.chroma_service import update_category
+from backend.query_data import query_rag
 from pydantic import BaseModel
-from Loader import get_vectorstore
 from typing import List, Optional
 
 # Upload folder for upload_files request

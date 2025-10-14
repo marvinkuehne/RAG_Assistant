@@ -2,8 +2,6 @@
 .DS_Store
 __pycache__/
 *.pyc
-backend/db/
-backend/db/**
 uploads/
 *.sqlite3
 *.log
