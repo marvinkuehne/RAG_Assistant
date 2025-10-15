@@ -46,13 +46,6 @@
 #         "verified": applied,
 #     }
 
-
-
-
-
-
-
-
 import os
 
 def update_category(vectorstore, filename: str, new_category: str | None):

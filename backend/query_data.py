@@ -1,6 +1,5 @@
 import os
-from langchain_chroma import Chroma
-from Loader import get_embedding, COLLECTION, get_user_chroma_dir
+from Loader import get_vectorstore
 from openai import OpenAI
 from dotenv import load_dotenv
 
@@ -9,22 +8,25 @@ load_dotenv()
 openai_api_key = os.getenv("OPENAI_API_KEY")
 
 
-def query_rag(query: str, user_id: str, categories: list[str] | None = None):
-    # 1) DB öffnen – gleicher Pfad wie Indexing
-    db = Chroma(
-        persist_directory=get_user_chroma_dir(user_id),
-        collection_name=COLLECTION,
-        embedding_function=get_embedding(),
-    )
+def query_rag(query: str, user_id: str, categories: list[str] | None):
+    db = get_vectorstore(user_id)
 
     # 2) Filter bauen + LOGGEN
-    filters = {}
+    filt = None
     if categories:
-        filters = {"category": {"$in": categories}}
+        cats = [c for c in categories if c]  # Leerwerte raus
+        if cats:
+            # filtert nur auf Metadatenfeld "category"
+            # user_id ist nicht zwingend nötig, wenn du pro Nutzer eigenen Persist-Ordner nutzt,
+            # schadet aber auch nicht:
+            filt = {"$and": [{"category": {"$in": cats}}]}
 
-    # 3) Suche + Treffer loggen
-    results = db.similarity_search_with_score(query, k=4, filter=filters or None)
-    print("RAG DEBUG → NUM_RESULTS:", len(results))
+    # 3) search
+    try:
+        results = db.similarity_search_with_score(query, k=4, filter=filt )
+    except Exception as e:
+        print("⚠️ Chroma filter error, fallback to no-filter:", e)
+        results = db.similarity_search_with_score(query, k=4)
 
     content_list: list[str] = []
     sources: list[str] = []
