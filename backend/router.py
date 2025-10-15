@@ -14,8 +14,11 @@ from pydantic import BaseModel
 from typing import List, Optional
 
 import sys, os
-print("CWD:", os.getcwd())
-print("sys.path:", sys.path)
+
+# Force backend directory into Python path
+current_dir = os.path.dirname(os.path.abspath(__file__))
+if current_dir not in sys.path:
+    sys.path.append(current_dir)
 
 
 # Upload folder for upload_files request
