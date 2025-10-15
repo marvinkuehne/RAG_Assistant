@@ -9,25 +9,20 @@ openai_api_key = os.getenv("OPENAI_API_KEY")
 
 
 def query_rag(query: str, user_id: str, categories: list[str] | None):
+
+    #1 Filter
     db = get_vectorstore(user_id)
+    cats = [c.strip() for c in (categories or []) if c and c.strip()]
+    filt = {"category": {"$in": cats}} if cats else None
 
-    # 2) Filter bauen + LOGGEN
-    filt = None
-    if categories:
-        cats = [c for c in categories if c]  # Leerwerte raus
-        if cats:
-            # filtert nur auf Metadatenfeld "category"
-            # user_id ist nicht zwingend nötig, wenn du pro Nutzer eigenen Persist-Ordner nutzt,
-            # schadet aber auch nicht:
-            filt = {"$and": [{"category": {"$in": cats}}]}
 
-    # 3) search
+    # 2 Query
     try:
-        results = db.similarity_search_with_score(query, k=4, filter=filt )
+        results = db.similarity_search_with_score(query, k=4, filter=filt)
+        note = ""
     except Exception as e:
-        print("⚠️ Chroma filter error, fallback to no-filter:", e)
         results = db.similarity_search_with_score(query, k=4)
-
+        note = f"filter failed: {e}"
     content_list: list[str] = []
     sources: list[str] = []
 

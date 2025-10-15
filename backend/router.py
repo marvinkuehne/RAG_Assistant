@@ -13,6 +13,14 @@ from query_data import query_rag
 from pydantic import BaseModel
 from typing import List, Optional
 
+# import logging, sys
+# logger = logging.getLogger("rag")
+# logger.setLevel(logging.INFO)
+# handler = logging.StreamHandler(sys.stdout)
+# handler.setFormatter(logging.Formatter("[%(asctime)s] %(levelname)s %(message)s"))
+# if not logger.handlers:
+#     logger.addHandler(handler)
+
 # Upload folder for upload_files request
 UploadFolder = "uploads"
 if not os.path.exists(UploadFolder):
@@ -72,14 +80,41 @@ class AskPayload(BaseModel):
     query: str
     categories: Optional[List[str]] = None
 
+# @app.get("/debug/category_counts/{user_id}")
+# def cat_counts(user_id: str):
+#     vs = get_vectorstore(user_id)
+#     data = vs._collection.get(where={}, include=["metadatas"])
+#     metas = data.get("metadatas") or []
+#     if metas and isinstance(metas[0], list):
+#         metas = [m for sub in metas for m in sub]
+#     counts = {}
+#     for m in metas:
+#         c = (m or {}).get("category", "")
+#         counts[c] = counts.get(c, 0) + 1
+#     return {"counts": counts}
+#
+# @app.post("/debug/preview_filter")
+# def preview_filter(payload: AskPayload):
+#     vs = get_vectorstore(payload.user_id)
+#     cats = [c.strip() for c in (payload.categories or []) if c and c.strip()]
+#     filt = {"category": {"$in": cats}} if cats else {}
+#     hit = vs._collection.get(where=filt, include=["ids","metadatas"])
+#     ids = hit.get("ids") or []
+#     if ids and isinstance(ids[0], list):  # flatten
+#         ids = [i for sub in ids for i in sub]
+#     return {"match_count": len(ids), "sample": (hit.get("metadatas") or [None])[0]}
 
-# ask LLM
+
 @app.post("/ask")
-async def askForm(payload: AskPayload):  # Fastapi gets question Json object from frontend and changes it into Question-Object (see above)
-    print("👉 Query:", payload.query)
-    print("👉 Categories:", payload.categories)
-    answer, sources = query_rag(payload.query, payload.user_id, payload.categories)
-    return [answer, sources]
+async def askForm(payload: AskPayload):
+    # logger.info("ASK user=%s q=%r cats=%r", payload.user_id, payload.query, payload.categories)
+    try:
+        answer, sources = query_rag(payload.query, payload.user_id, payload.categories)
+        return [answer, sources]
+    except Exception as e:
+        # logger.exception("ASK failed")
+        # Frontend bekommt eine sinnvolle Fehlermeldung
+        return [{"error": str(e)}, []]
 
 
 @app.post("/upload_files")
