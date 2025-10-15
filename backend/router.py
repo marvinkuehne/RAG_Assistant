@@ -1,5 +1,17 @@
-import os
+# ---- path bootstrap (must be first) ----
+import os, sys, importlib.util
+FILE_DIR = os.path.dirname(os.path.abspath(__file__))
+if FILE_DIR not in sys.path:
+    sys.path.insert(0, FILE_DIR)
 
+print("CWD      :", os.getcwd())
+print("FILE DIR :", FILE_DIR)
+print("sys.path[0]:", sys.path[0])
+print("find_spec('db'):", importlib.util.find_spec('db'))
+# ---- imports after this ----
+
+
+import os
 from fastapi import FastAPI, File, UploadFile, Form
 import uvicorn
 import mimetypes
@@ -12,13 +24,6 @@ from services.chroma_service import update_category
 from query_data import query_rag
 from pydantic import BaseModel
 from typing import List, Optional
-
-import sys, os
-
-# Force backend directory into Python path
-current_dir = os.path.dirname(os.path.abspath(__file__))
-if current_dir not in sys.path:
-    sys.path.append(current_dir)
 
 
 # Upload folder for upload_files request
