@@ -7,19 +7,13 @@ import mimetypes
 from starlette.middleware.cors import CORSMiddleware
 
 from Loader import load_documents, split_documents, get_embedding, create_ids, add_to_chroma, get_user_chroma_dir, get_vectorstore
-from db.chat_db import create_session, get_sessions, save_session, load_session, conn
+from .db.chat_db import create_session, get_sessions, save_session, load_session, conn
 from services.chroma_service import update_category
 from query_data import query_rag
 from pydantic import BaseModel
 from typing import List, Optional
 
-# import logging, sys
-# logger = logging.getLogger("rag")
-# logger.setLevel(logging.INFO)
-# handler = logging.StreamHandler(sys.stdout)
-# handler.setFormatter(logging.Formatter("[%(asctime)s] %(levelname)s %(message)s"))
-# if not logger.handlers:
-#     logger.addHandler(handler)
+
 
 # Upload folder for upload_files request
 UploadFolder = "uploads"
@@ -80,29 +74,6 @@ class AskPayload(BaseModel):
     query: str
     categories: Optional[List[str]] = None
 
-# @app.get("/debug/category_counts/{user_id}")
-# def cat_counts(user_id: str):
-#     vs = get_vectorstore(user_id)
-#     data = vs._collection.get(where={}, include=["metadatas"])
-#     metas = data.get("metadatas") or []
-#     if metas and isinstance(metas[0], list):
-#         metas = [m for sub in metas for m in sub]
-#     counts = {}
-#     for m in metas:
-#         c = (m or {}).get("category", "")
-#         counts[c] = counts.get(c, 0) + 1
-#     return {"counts": counts}
-#
-# @app.post("/debug/preview_filter")
-# def preview_filter(payload: AskPayload):
-#     vs = get_vectorstore(payload.user_id)
-#     cats = [c.strip() for c in (payload.categories or []) if c and c.strip()]
-#     filt = {"category": {"$in": cats}} if cats else {}
-#     hit = vs._collection.get(where=filt, include=["ids","metadatas"])
-#     ids = hit.get("ids") or []
-#     if ids and isinstance(ids[0], list):  # flatten
-#         ids = [i for sub in ids for i in sub]
-#     return {"match_count": len(ids), "sample": (hit.get("metadatas") or [None])[0]}
 
 
 @app.post("/ask")
