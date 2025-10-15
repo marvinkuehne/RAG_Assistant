@@ -1,27 +1,15 @@
-# ---- path bootstrap (must be first) ----
-import os, sys, importlib.util
-FILE_DIR = os.path.dirname(os.path.abspath(__file__))
-if FILE_DIR not in sys.path:
-    sys.path.insert(0, FILE_DIR)
-
-print("CWD      :", os.getcwd())
-print("FILE DIR :", FILE_DIR)
-print("sys.path[0]:", sys.path[0])
-print("find_spec('db'):", importlib.util.find_spec('db'))
-# ---- imports after this ----
-
 
 import os
-from fastapi import FastAPI, File, UploadFile, Form
+from fastapi import FastAPI, File, UploadFile, Form, HTTPException
 import uvicorn
 import mimetypes
 
 from starlette.middleware.cors import CORSMiddleware
 
-from Loader import load_documents, split_documents, get_embedding, create_ids, add_to_chroma, get_user_chroma_dir, get_vectorstore
-from db.chat_db import create_session, get_sessions, save_session, load_session, conn
-from services.chroma_service import update_category
-from query_data import query_rag
+from backend.loader import load_documents, split_documents, get_embedding, create_ids, add_to_chroma, get_user_chroma_dir, get_vectorstore
+from backend.db.chat_db import create_session, get_sessions, save_session, load_session, conn
+from backend.services.chroma_service import update_category
+from backend.query_data import query_rag
 from pydantic import BaseModel
 from typing import List, Optional
 
@@ -354,35 +342,36 @@ def delete_session(session_id: str):
     return {"message": f"Session {session_id} deleted successfully"}
 
 
-# @app.delete("/cleanup_all_categories/{user_id}")
-# async def cleanup_all_categories(user_id: str):
-#     try:
-#         vs = get_vectorstore(user_id)
-#         res = vs.get(include=["metadatas"])
-#         ids = res.get("ids", [])
-#         metas = res.get("metadatas", [])
-#
-#         if not ids or not metas:
-#             return {"ok": True, "updated": 0, "message": "No entries found"}
-#
-#         # clear category field for all documents
-#         for m in metas:
-#             if isinstance(m, dict):
-#                 m["category"] = None
-#
-#         # ✅ update without manual persist (Chroma auto-saves)
-#         collection = vs._collection
-#         collection.update(ids=ids, metadatas=metas)
-#
-#         return {
-#             "ok": True,
-#             "updated": len(ids),
-#             "message": f"All categories cleared ({len(ids)} entries)"
-#         }
-#
-#     except Exception as e:
-#         print("Error while cleaning categories:", e)
-#         raise HTTPException(status_code=500, detail=str(e))
+#  in browswer einfügen und endpoint delete klicken: http://127.0.0.1:8000/docs
+@app.delete("/cleanup_all_categories/{user_id}")
+async def cleanup_all_categories(user_id: str):
+    try:
+        vs = get_vectorstore(user_id)
+        res = vs.get(include=["metadatas"])
+        ids = res.get("ids", [])
+        metas = res.get("metadatas", [])
+
+        if not ids or not metas:
+            return {"ok": True, "updated": 0, "message": "No entries found"}
+
+        # clear category field for all documents
+        for m in metas:
+            if isinstance(m, dict):
+                m["category"] = None
+
+        # ✅ update without manual persist (Chroma auto-saves)
+        collection = vs._collection
+        collection.update(ids=ids, metadatas=metas)
+
+        return {
+            "ok": True,
+            "updated": len(ids),
+            "message": f"All categories cleared ({len(ids)} entries)"
+        }
+
+    except Exception as e:
+        print("Error while cleaning categories:", e)
+        raise HTTPException(status_code=500, detail=str(e))
 
 if __name__ == "__main__":
     uvicorn.run("router:app", host="127.0.0.1", port=8000, reload=True)
