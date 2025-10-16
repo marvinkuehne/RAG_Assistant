@@ -3,6 +3,4 @@
 __pycache__/
 *.pyc
 uploads/
-*.sqlite3
 *.log
-db/
