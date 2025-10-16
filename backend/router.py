@@ -4,7 +4,8 @@ import uvicorn
 import mimetypes
 
 from starlette.middleware.cors import CORSMiddleware
-from Loader import load_documents, split_documents, get_embedding, create_ids, add_to_chroma, get_user_chroma_dir, get_vectorstore
+from Loader import load_documents, split_documents, get_embedding, create_ids, add_to_chroma, get_user_chroma_dir, \
+    get_vectorstore
 from db.chat_db import create_session, get_sessions, save_session, load_session, conn
 from services.chroma_service import update_category
 from query_data import query_rag
@@ -31,6 +32,7 @@ origins = [
     "http://127.0.0.1:8000",
     "https://lambent-tapioca-db599c.netlify.app",
     "https://rag-assistant-frontend.netlify.app",
+    "https://ragassistant-production.up.railway.app",
 ]
 
 # Block unauthorized requrests
@@ -69,7 +71,6 @@ class AskPayload(BaseModel):
     user_id: str
     query: str
     categories: Optional[List[str]] = None
-
 
 
 @app.post("/ask")
@@ -178,7 +179,6 @@ async def processFiles(files: FileList):
     embeddings = get_embedding()
     progress_store[files.user_id] = 40
 
-
     # normalize source to just the filename; DO NOT set category
     total = len(chunks)
     for i, chunk in enumerate(chunks):
@@ -195,10 +195,7 @@ async def processFiles(files: FileList):
     add_to_chroma(embeddings, chunks, files.user_id)  # chunk contains metadata (source, user_id)
     progress_store[files.user_id] = 100  # Fertig
 
-
     return {"processed_files": [f.filename for f in files.files]}
-
-
 
 
 @app.get("/progress/{user_id}")
@@ -206,6 +203,7 @@ async def get_progress(user_id: str):
     """Frontend polls this endpoint to know current progress"""
     progress = progress_store.get(user_id, 0)
     return {"progress": progress}
+
 
 # @app.get("/get_category/{user_id}")
 # async def get_category(user_id: str):
@@ -245,8 +243,6 @@ async def get_category(user_id: str):
             cats.append(cat)
 
     return {"categories": cats}
-
-
 
 
 # def _get_category_for_file(vs, filename: str) -> str | None:
@@ -369,6 +365,7 @@ async def cleanup_all_categories(user_id: str):
     except Exception as e:
         print("Error while cleaning categories:", e)
         raise HTTPException(status_code=500, detail=str(e))
+
 
 if __name__ == "__main__":
     uvicorn.run("router:app", host="127.0.0.1", port=8000, reload=True)
