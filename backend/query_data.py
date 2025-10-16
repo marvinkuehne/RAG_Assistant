@@ -1,5 +1,5 @@
 import os
-from backend.Loader import get_vectorstore
+from Loader import get_vectorstore
 from openai import OpenAI
 from dotenv import load_dotenv
 
