@@ -33,6 +33,7 @@ origins = [
     "https://lambent-tapioca-db599c.netlify.app",
     "https://rag-assistant-frontend.netlify.app",
     "https://ragassistant-production.up.railway.app",
+    "https://rag-assistant-marvin.vercel.app",
 ]
 
 # Block unauthorized requrests
