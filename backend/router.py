@@ -5,11 +5,10 @@ import uvicorn
 import mimetypes
 
 from starlette.middleware.cors import CORSMiddleware
-
-from backend.loader import load_documents, split_documents, get_embedding, create_ids, add_to_chroma, get_user_chroma_dir, get_vectorstore
-from backend.db.chat_db import create_session, get_sessions, save_session, load_session, conn
-from backend.services.chroma_service import update_category
-from backend.query_data import query_rag
+from .loader import load_documents, split_documents, get_embedding, create_ids, add_to_chroma, get_user_chroma_dir, get_vectorstore
+from db.chat_db import create_session, get_sessions, save_session, load_session, conn
+from services.chroma_service import update_category
+from query_data import query_rag
 from pydantic import BaseModel
 from typing import List, Optional
 
