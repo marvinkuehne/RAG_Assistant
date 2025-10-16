@@ -1,4 +1,3 @@
-
 import os
 from fastapi import FastAPI, File, UploadFile, Form, HTTPException
 import uvicorn
@@ -6,7 +5,7 @@ import mimetypes
 
 from starlette.middleware.cors import CORSMiddleware
 from .loader import load_documents, split_documents, get_embedding, create_ids, add_to_chroma, get_user_chroma_dir, get_vectorstore
-# from db.chat_db import create_session, get_sessions, save_session, load_session, conn
+from db.chat_db import create_session, get_sessions, save_session, load_session, conn
 from services.chroma_service import update_category
 from query_data import query_rag
 from pydantic import BaseModel
@@ -299,47 +298,47 @@ def _get_category_for_file(vs, filename: str) -> str | None:
             return cat
     return None
 
-#
-# # 🧩 Neue Chat-Session erstellen
-# @app.post("/create_session")
-# async def create_session_route(data: dict):
-#     user_id = data.get("user_id")
-#     title = data.get("title", "New Chat")
-#     session_id = create_session(user_id, title)
-#     return {"session_id": session_id, "title": title}
-#
-#
-# # 📋 Alle Sessions eines Users abrufen
-# @app.get("/get_sessions/{user_id}")
-# async def get_sessions_route(user_id: str):
-#     return get_sessions(user_id)
-#
-#
-# # 💾 Spezifische Session speichern
-# @app.post("/save_session")
-# async def save_session_route(data: dict):
-#     session_id = data.get("session_id")
-#     messages = data.get("messages", [])
-#     save_session(session_id, messages)
-#     return {"status": "saved"}
-#
-#
-# # 📤 Spezifische Session laden
-# @app.get("/get_session/{session_id}")
-# async def get_session_route(session_id: str):
-#     return load_session(session_id)
+
+# 🧩 Neue Chat-Session erstellen
+@app.post("/create_session")
+async def create_session_route(data: dict):
+    user_id = data.get("user_id")
+    title = data.get("title", "New Chat")
+    session_id = create_session(user_id, title)
+    return {"session_id": session_id, "title": title}
 
 
-# @app.delete("/delete_session/{session_id}")
-# def delete_session(session_id: str):
-#     """
-#     Delete a specific chat session by session_id.
-#     """
-#     cursor = conn.cursor()
-#     cursor.execute("DELETE FROM chat_sessions WHERE session_id = ?", (session_id,))
-#     conn.commit()
-#     return {"message": f"Session {session_id} deleted successfully"}
-#
+# 📋 Alle Sessions eines Users abrufen
+@app.get("/get_sessions/{user_id}")
+async def get_sessions_route(user_id: str):
+    return get_sessions(user_id)
+
+
+# 💾 Spezifische Session speichern
+@app.post("/save_session")
+async def save_session_route(data: dict):
+    session_id = data.get("session_id")
+    messages = data.get("messages", [])
+    save_session(session_id, messages)
+    return {"status": "saved"}
+
+
+# 📤 Spezifische Session laden
+@app.get("/get_session/{session_id}")
+async def get_session_route(session_id: str):
+    return load_session(session_id)
+
+
+@app.delete("/delete_session/{session_id}")
+def delete_session(session_id: str):
+    """
+    Delete a specific chat session by session_id.
+    """
+    cursor = conn.cursor()
+    cursor.execute("DELETE FROM chat_sessions WHERE session_id = ?", (session_id,))
+    conn.commit()
+    return {"message": f"Session {session_id} deleted successfully"}
+
 
 #  in browswer einfügen und endpoint delete klicken: http://127.0.0.1:8000/docs
 @app.delete("/cleanup_all_categories/{user_id}")
