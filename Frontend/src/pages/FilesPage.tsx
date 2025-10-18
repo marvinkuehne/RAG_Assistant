@@ -18,6 +18,7 @@ type FileWithProgress =
         id: string;        //  ID
         file: File;        //  Browser-file
         progress: number;
+        stage: 'upload' | 'processing' | 'done';
         uploaded: boolean;
     }
 
@@ -76,9 +77,10 @@ export default function FilesPage() {
         const newFiles: FileWithProgress[] = Array.from(e.target.files).map((file) => ({
             file,
             progress: 0,
+            stage: 'upload',
             uploaded: false,
             id: file.name,
-        }))
+        }));
 
         setFiles(prevFiles => [...prevFiles, ...newFiles]);
 
@@ -95,47 +97,50 @@ export default function FilesPage() {
         }
 
         //send files to fileupload endpoint
-        setUploading(true) // upload mode (e.g. deactives buttons)
+        setProgress(0);          // ✅ Progress zurücksetzen
+        setUploading(true);      // ✅ Upload starten
 
 
         const uploadPromises = files.map(async (fileWithProgress) => {
-            const formData = new FormData();
-            formData.append("file", fileWithProgress.file); //fetch only file from fileWithProgress object to backend
-            formData.append("user_id", userId);
-            try {
-                await api.post( //save answer from backend in response
-                    `/upload_files`, formData, { //1. send file content (binary) via fromdata
-                        onUploadProgress: (progressEvent) => {
-                            const progress = Math.round(
-                                (progressEvent.loaded * 100) / (progressEvent.total || 1),
-                            );
+                    const formData = new FormData();
+                    formData.append("file", fileWithProgress.file); //fetch only file from fileWithProgress object to backend
+                    formData.append("user_id", userId);
+                    try {
+                        await api.post( //save answer from backend in response
+                            `/upload_files`, formData, { //1. send file content (binary) via fromdata
+                                onUploadProgress: (ev) => {
+                                    const raw = Math.round((ev.loaded * 100) / (ev.total || 1)); // 0..100
+                                    const mapped = Math.min(80, raw * 0.8);                      // 0..80
+                                    setFiles(prev =>
+                                        prev.map(f =>
+                                            f.id === fileWithProgress.id
+                                                ? {...f, progress: Math.max(f.progress, mapped)}     // nie kleiner werden
+                                                : f
+                                        )
+                                    );
+                                },
+                            });
+
+                        //after file upload: set upload to true for the file
+                        setFiles((prevFiles) =>
+                            prevFiles.map((file) =>
+                                file.id === fileWithProgress.id
+                                    ? {...file, uploaded: true, stage: 'processing'}
+                                    : file,
+                            ),
+                        );
+                    } catch (error) {
+                        console.error(error);
+                        setUploading(false); // ✅ bei Fehler wieder aktivieren
+                    }
 
 
-                            //while fileupload
-                            setFiles((prevFiles) =>
-                                prevFiles.map((file) =>
-                                    file.id === fileWithProgress.id ? {...file, progress} : file,
-                                ),
-                            );
-                        },
-                    });
-                //after file upload: set upload to true for the file
-                setFiles((prevFiles) =>
-                    prevFiles.map((file) =>
-                        file.id === fileWithProgress.id
-                            ? {...file, uploaded: true}
-                            : file,
-                    ),
-                );
-            } catch (error) {
-                console.error(error);
-            }
-
-
-        });
+                }
+            )
+        ;
         await Promise.all(uploadPromises);
 
-        //2. gather filenames for "processing files" endpoint and send seperate
+//2. gather filenames for "processing files" endpoint and send seperate
         api.post("/process_files", {
             user_id: userId,
             files: files.map(f => ({
@@ -147,23 +152,39 @@ export default function FilesPage() {
 // Fortschritt regelmäßig abfragen
         const interval = setInterval(async () => {
             try {
-                const res = await api.get(`/progress/${userId}`);
-                setProgress(res.data.progress);
-                if (res.data.progress >= 100) {
+                const res = await api.get(`/progress/${userId}`);            // 0..100 vom Backend
+                const backend = res.data.progress;
+                const mapped = 80 + Math.round((backend * 20) / 100);        // 80..100
+
+                setProgress(backend); // optional, falls du's woanders brauchst
+
+                setFiles(prev =>
+                    prev.map(f => ({
+                        ...f,
+                        stage: backend >= 100 ? 'done' : 'processing',
+                        progress: Math.max(f.progress, mapped),                   // nie kleiner werden
+                    }))
+                );
+
+                if (backend >= 100) {
                     clearInterval(interval);
-                    setProgress(100);
+                    // Kurzer „fertig“-Moment, dann Maske schließen & Liste aktualisieren
                     setTimeout(() => {
-                        setFiles([]);
+                        setFiles([]);                                            // Upload-Maske weg
+                        setUploading(false);               // ← wieder klickbar
+                        if (inputRef.current) inputRef.current.value = ''; // ← gleiche Datei nochmal auswählbar
                         fetchUserFiles();
-                    }, 1000);
+                    }, 800);
                 }
             } catch (err) {
                 console.error("Error checking progress:", err);
+                clearInterval(interval);
+                setUploading(false); // ✅ auch bei Fehler wieder freigeben
             }
-        }, 1000);
+        }, 600); // 0.6s Abfrage-Takt
     }
 
-    //remove from Server
+//remove from Server
     async function onRemoveServer(i: number) {
         const filename_id = serverFiles[i].filename;
         //delete backend
@@ -173,7 +194,7 @@ export default function FilesPage() {
         await fetchUserFiles()
     }
 
-    //remove all selected files from Server
+//remove all selected files from Server
     async function deleteSelected() {
         for (const i of selectedRows) {
             await onRemoveServer(i)
@@ -183,7 +204,7 @@ export default function FilesPage() {
     }
 
 
-    //remove from upload mask
+//remove from upload mask
     function removeFile(id: string) {
         setFiles(prevFiles => prevFiles.filter(item => item.id !== id))
     }
@@ -358,15 +379,12 @@ type FileItemProps = {
 
 };
 
-function FileItem({file, onRemove, uploading, backendProgress}: FileItemProps) { //state = file and not files due to FileList function
+function FileItem({file, onRemove, uploading}: FileItemProps) { //state = file and not files due to FileList function
     const Icon = getFileIcon(file.file.type);
 // zeige Upload- oder Backend-Fortschritt
-    const progressValue = file.uploaded ? backendProgress : file.progress;
-    const progressLabel = file.uploaded
-        ? backendProgress < 100
-            ? `Processing: ${backendProgress}%`
-            : "Completed"
-        : `${Math.round(file.progress)}%`;
+    const progressValue = file.progress;
+    const label = file.progress < 100 ? `${Math.round(file.progress)}%` : "Completed";
+
 
     return (
         <div className="space-y-2 rounded-md bg-gray-700 p-4">
@@ -389,7 +407,9 @@ function FileItem({file, onRemove, uploading, backendProgress}: FileItemProps) {
                 )}
             </div>
 
-            <div className="text-right text-xs">{progressLabel}</div>
+
+            {/* Progressbar */}
+            <div className="text-right text-xs">{label}</div>
             <ProgressBar progress={progressValue}/>
         </div>
     );
