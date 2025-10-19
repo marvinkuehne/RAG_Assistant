@@ -3,77 +3,71 @@ from Loader import get_vectorstore
 from openai import OpenAI
 from dotenv import load_dotenv
 
-# .env laden
 load_dotenv()
 openai_api_key = os.getenv("OPENAI_API_KEY")
 
-
 def query_rag(query: str, user_id: str, categories: list[str] | None):
+    print(">>> RUNNING query_rag (enhanced) <<<")
 
-    #1 Filter
     db = get_vectorstore(user_id)
     cats = [c.strip() for c in (categories or []) if c and c.strip()]
     filt = {"category": {"$in": cats}} if cats else None
 
-
-    # 2 Query
     try:
-        results = db.similarity_search_with_score(query, k=4, filter=filt)
-        note = ""
+        results = db.similarity_search_with_score(query, k=6, filter=filt)
     except Exception as e:
-        results = db.similarity_search_with_score(query, k=4)
-        note = f"filter failed: {e}"
-    content_list: list[str] = []
-    sources: list[str] = []
+        results = db.similarity_search_with_score(query, k=6)
+        print("⚠️ Filter failed:", e)
 
+    context_parts = []
+    sources = []
     for i, (doc, score) in enumerate(results, start=1):
-        content_list.append(doc.page_content)
         src = os.path.basename(doc.metadata.get("source", "unknown"))
         page = doc.metadata.get("page", 0)
-        cat = doc.metadata.get("category")
+        content = doc.page_content.strip()
+        context_parts.append(f"[{i}] From {src} (page {page}):\n{content}")
         sources.append(f"{src}:p{page}")
-        print(f"RAG DEBUG [{i}] src={src} p={page} cat={cat} score={score:.4f}")
+        print(f"RAG DEBUG [{i}] {src}:p{page} score={score:.4f}")
 
-    context = "\n\n---\n\n".join(content_list)
+    context = "\n\n---\n\n".join(context_parts)
+    if len(context) > 12000:
+        context = context[:12000]
 
-    # # helper markdown response
-    # def format_markdown_response(text: str) -> str:
-    #     """Replace section headers with real Markdown formatting."""
-    #     formatted = text
-    #
-    #     # Ersetze bekannte Abschnittstitel durch Markdown-Überschriften
-    #     formatted = formatted.replace("TL;DR", "## TL;DR")
-    #     formatted = formatted.replace("Steps", "\n\n---\n\n## Steps")
-    #     formatted = formatted.replace("Details", "\n\n---\n\n## Details")
-    #     formatted = formatted.replace("Sources", "\n\n---\n\n## Sources")
-    #
-    #     # Falls das Modell zu viele Leerzeichen produziert
-    #     formatted = "\n".join(line.strip() for line in formatted.splitlines())
-    #     return formatted
-
-    # 4) LLM
     STRUCTURE_GUIDE = """
-    You are a helpful assistant. Answer **only** using the CONTEXT below.
+You are a knowledgeable and concise assistant that uses only the provided CONTEXT to answer questions.
 
-    ### FORMAT
-    - Output **must be valid Markdown**.
-    - Use sections:
-      ## Summary
-    - Write clean Markdown syntax: headings, bullet lists, paragraphs.
-    - Do not output JSON or pseudo-structure.
-    """
+### OBJECTIVE
+Give the user a direct, natural answer — similar to ChatGPT — using only the information available in the context. 
+Be confident when the answer is clear, and say when the context lacks enough information.
+
+### STYLE
+- Write in full sentences, conversational and human-like.
+- Prefer short paragraphs and bullet points when helpful.
+- Never add section headers like "Summary" or "Context".
+- Do not restate the question.
+- Never mention the word "context" or "documents".
+
+### BEHAVIOR
+If the context clearly contains the answer:
+→ Answer naturally, as if explaining it.
+If the context is incomplete:
+→ Acknowledge uncertainty briefly, then answer as far as possible.
+"""
 
     client = OpenAI(api_key=openai_api_key)
     prompt = f"""{STRUCTURE_GUIDE}
 
-     ### CONTEXT
-     {context}
+### CONTEXT
+{context}
 
-     ### QUESTION
-     {query}
-     """
+### QUESTION
+{query}
+"""
 
-    response = client.responses.create(model="gpt-5-nano", input=prompt)
-    answer = response.output_text
+    response = client.responses.create(
+        model="gpt-4o-mini",
+        input=prompt,
+        max_output_tokens=600,
+    )
 
-    return answer, sources
+    return response.output_text, sources

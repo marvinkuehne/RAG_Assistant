@@ -2,7 +2,7 @@ import {useState, useEffect, useRef} from "react";
 import api from '../api.ts';
 import './AskPage.css';
 import Select from "react-select";
-import AnswerDisplay from "../components/AnswerDisplay.tsx";
+// import AnswerDisplay from "../components/AnswerDisplay.tsx";
 import {useUserId} from "../components/useUserID.ts";
 
 
@@ -326,14 +326,10 @@ export default function AskPage() {
                                     : "bg-neutral-800 text-neutral-100 border border-neutral-700",
                             ].join(" ")}
                         >
-                            {/*import Answer display to format response for assistant*/}
 
-                            {m.role === "assistant" ? (<AnswerDisplay text={m.content}/>
 
-                            ) : (
-                                // User-Bubble (nur Text)
                                 <div className="whitespace-pre-wrap">{m.content}</div>
-                            )}
+
 
                             {/* Show sources only when assistant  */}
                             {m.role === "assistant" && m.sources && m.sources.length > 0 && (
